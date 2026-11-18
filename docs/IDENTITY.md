@@ -55,10 +55,13 @@ retention, and data-handling controls.
    `MIGRATION_DATABASE_URL` for the migration login using
    `postgresql+psycopg://…` URLs. Configure the exact token issuer in
    `SUPABASE_JWT_ISSUER`, and point `SUPABASE_JWKS_URL` to the project's JWKS
-   endpoint for asymmetric signing. The expected audience defaults to
-   `authenticated`. For a legacy HS256 project such as the default local CLI,
-   use `SUPABASE_JWT_SECRET` instead of the JWKS setting. Keep the legacy
-   signing secret server-side.
+   endpoint for asymmetric signing. The pinned Supabase CLI signs user access
+   tokens with ES256 by default. Its standard local issuer is
+   `http://127.0.0.1:54321/auth/v1`, and its JWKS endpoint appends
+   `/.well-known/jwks.json` to that issuer. The expected audience defaults to
+   `authenticated`. For a project configured for legacy HS256 signing, use
+   `SUPABASE_JWT_SECRET` in place of the JWKS setting. Keep the legacy signing
+   secret server-side.
 4. Copy `apps/web/.env.example` to `apps/web/.env.local`. Configure the
    Supabase URL, its public publishable key or legacy anon key, and the
    server-side API URL. Use the same Supabase issuer for the web and API.

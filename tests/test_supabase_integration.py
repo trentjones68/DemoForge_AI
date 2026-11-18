@@ -23,7 +23,6 @@ class LocalSupabase(BaseModel):
     api_url: HttpUrl = Field(alias="API_URL")
     anon_key: SecretStr = Field(alias="ANON_KEY")
     service_key: SecretStr = Field(alias="SERVICE_ROLE_KEY")
-    signing_key: SecretStr = Field(alias="JWT_SECRET")
     auth_url: HttpUrl | None = Field(default=None, alias="AUTH_URL")
     storage_url: HttpUrl | None = Field(default=None, alias="STORAGE_URL")
 
@@ -91,8 +90,8 @@ def test_real_supabase_auth_and_storage_are_workspace_scoped() -> None:
     ), "Use a disposable local stack"
     settings = Settings(
         supabase_jwt_issuer=HttpUrl(local.issuer),
-        supabase_jwt_secret=local.signing_key,
-        supabase_jwks_url=None,
+        supabase_jwt_secret=None,
+        supabase_jwks_url=HttpUrl(f"{local.issuer}/.well-known/jwks.json"),
     )
     assert settings.migration_database_url and settings.database_url
     assert make_url(str(settings.database_url)).host in ("localhost", "127.0.0.1")

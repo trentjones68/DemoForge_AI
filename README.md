@@ -1,9 +1,9 @@
 # DemoForge AI
 
 DemoForge AI helps sales engineers turn discovery evidence into reviewed
-requirements and demo storyboards. The Foundation scaffold provides a web
-landing page, API health probes, local database tooling, and the worker and
-schema contracts used by later milestones.
+requirements and demo storyboards. The Foundation milestone includes Supabase
+sign-in, workspace membership and authorization, API health probes, local
+database tooling, and the worker and schema contracts for later milestones.
 
 ## Local setup
 
@@ -15,7 +15,7 @@ Install Docker with Compose, Make, Node and npm at the versions specified in
 cp .env.example .env
 make install
 make db-up
-make migrate
+make migrate REVISION=0002
 ```
 
 If your home directory is read-only, set `npm_config_cache` and `UV_CACHE_DIR`
@@ -34,22 +34,23 @@ the connection is unconfigured or unavailable. The probes expose no
 connection details. Stop the dev servers with Ctrl-C and the database with
 `make db-down`. This preserves the database volume.
 
-When Auth or Storage work begins, install Supabase CLI 2.80.0 separately and
+For the full identity workflow, install Supabase CLI 2.80.0 separately and
 use `make supabase-up`. Run `supabase status` for local connection settings.
 Keep the request and migration DSNs separate when configuring `.env`. Stop
-the stack with `make supabase-down`. [Local dependencies](infra/README.md)
+the stack with `make supabase-down`. [Local dependencies](infra/README.md) · [Identity setup and permissions](docs/IDENTITY.md)
 
 ## Development checks
 
 ```sh
 make check    # Lint, strict TypeScript and Python checks, unit and contract tests
+make test-integration # Run against Compose Postgres migrated to 0002
 make build    # Production Next.js build
 make smoke    # Run with web, API and database already running
 ```
 
 CI repeats the checks from locked dependencies, verifies migration upgrade
 and downgrade, and runs smoke checks against a built web app and real local
-Postgres. The worker scaffold defines a typed broker interface. Broker
+Postgres. A separate job exercises real Supabase Auth and Storage. The worker scaffold defines a typed broker interface. Broker
 selection, dispatch, retries, and job execution belong to the durable jobs
 milestone.
 
@@ -63,10 +64,8 @@ on managed Python hosting. Supply the database URL through the platform's secret
 store. Run `make migrate` separately with a migration credential. The scaffold
 has no worker process to deploy.
 
-Roll back a release by restoring the previous web and API versions. The
-scaffold's single Alembic baseline creates no application tables. To reverse
-that baseline in a disposable or verified compatible database, run
-`uv run --locked alembic downgrade base`. Review the impact and recovery plan of
-any later migrations before a database rollback.
+Roll back a release by restoring the previous compatible web and API versions.
+Back up workspace data and objects before a database downgrade. See the
+[identity rollback procedure](docs/IDENTITY.md#verification-and-rollback).
 
 [Architecture and milestone plan](docs/DECISIONS.md) · [Engineering instructions](AGENTS.md)

@@ -2,12 +2,16 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Literal
 
-from fastapi import FastAPI, Response
+from fastapi import FastAPI, Request, Response
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.exc import SQLAlchemyError
+from starlette.middleware.base import RequestResponseEndpoint
 
+from demoforge_api.auth import TokenVerifier
 from demoforge_api.db import check_database, database_engine
 from demoforge_api.settings import Settings
+from demoforge_api.workspaces import workspace_router
 
 
 class HealthResponse(BaseModel):
@@ -28,6 +32,28 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 engine.dispose()
 
     app = FastAPI(title="DemoForge AI", version="0.0.0", lifespan=lifespan)
+
+    @app.middleware("http")
+    async def private_workspace_responses(
+        request: Request, call_next: RequestResponseEndpoint
+    ) -> Response:
+        response = await call_next(request)
+        if request.url.path.startswith("/v1/workspaces"):
+            response.headers["Cache-Control"] = "no-store"
+        return response
+
+    @app.exception_handler(SQLAlchemyError)
+    async def safe_database_error(_: Request, error: SQLAlchemyError) -> JSONResponse:
+        state = getattr(getattr(error, "orig", None), "sqlstate", None)
+        if state == "42501":
+            return JSONResponse({"detail": "Workspace action denied"}, status_code=403)
+        if state == "23503":
+            return JSONResponse(
+                {"detail": "Referenced account or workspace not found"}, status_code=404
+            )
+        return JSONResponse({"detail": "Workspace service unavailable"}, status_code=503)
+
+    app.include_router(workspace_router(engine, TokenVerifier(configuration)))
 
     @app.get("/health/live", response_model=HealthResponse)
     def liveness(response: Response) -> HealthResponse:

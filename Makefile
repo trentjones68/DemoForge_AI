@@ -1,9 +1,10 @@
 .DEFAULT_GOAL := help
 SUPABASE_CLI ?= supabase
-.PHONY: help install db-up db-down supabase-up supabase-down web api migrate lint typecheck test check build smoke
+REVISION ?= head
+.PHONY: help install db-up db-down supabase-up supabase-down web api migrate lint typecheck test test-integration check build smoke
 
 help:
-	@printf '%s\n' 'install  Locked npm and Python installs' 'db-up/db-down  Start/stop Compose Postgres' 'supabase-up/supabase-down  Start/stop the full local Supabase stack' 'web/api  Run one development service per terminal' 'migrate  Upgrade the configured local database' 'check  Lint, typecheck and test' 'build  Build the web app' 'smoke  Check running web, API and database'
+	@printf '%s\n' 'install  Locked npm and Python installs' 'db-up/db-down  Start/stop Compose Postgres' 'supabase-up/supabase-down  Start/stop the full local Supabase stack' 'web/api  Run one development service per terminal' 'migrate  Upgrade the configured database (REVISION defaults to head)' 'check  Lint, typecheck and test' 'build  Build the web app' 'smoke  Check running web, API and database'
 
 install:
 	npm ci
@@ -28,7 +29,7 @@ api:
 	uv run --locked uvicorn demoforge_api.main:create_app --factory --app-dir services/api --reload
 
 migrate:
-	uv run --locked alembic upgrade head
+	uv run --locked alembic upgrade $(REVISION)
 
 lint:
 	npm run lint --workspace @demoforge/web
@@ -40,7 +41,10 @@ typecheck:
 	uv run --locked mypy
 
 test:
-	uv run --locked pytest
+	uv run --locked pytest -m 'not integration'
+
+test-integration:
+	DEMOFORGE_TEST_DATABASE=1 uv run --locked pytest -m 'integration and not supabase'
 
 check: lint typecheck test
 

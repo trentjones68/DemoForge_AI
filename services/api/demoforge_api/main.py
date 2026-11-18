@@ -10,6 +10,7 @@ from starlette.middleware.base import RequestResponseEndpoint
 
 from demoforge_api.auth import TokenVerifier
 from demoforge_api.db import check_database, database_engine
+from demoforge_api.opportunities import opportunity_router
 from demoforge_api.settings import Settings
 from demoforge_api.workspaces import workspace_router
 
@@ -53,7 +54,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             )
         return JSONResponse({"detail": "Workspace service unavailable"}, status_code=503)
 
-    app.include_router(workspace_router(engine, TokenVerifier(configuration)))
+    verifier = TokenVerifier(configuration)
+    app.include_router(workspace_router(engine, verifier))
+    app.include_router(opportunity_router(engine, verifier))
 
     @app.get("/health/live", response_model=HealthResponse)
     def liveness(response: Response) -> HealthResponse:

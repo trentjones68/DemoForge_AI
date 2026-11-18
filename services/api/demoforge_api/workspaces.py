@@ -1,15 +1,13 @@
-from collections.abc import Iterator
 from enum import StrEnum
 from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, ConfigDict, StringConstraints
 from sqlalchemy import Connection, Engine, text
 
 from demoforge_api.auth import TokenVerifier
-from demoforge_api.db import DatabaseIdentityError, workspace_transaction
+from demoforge_api.request_access import access_dependencies
 
 
 class Role(StrEnum):
@@ -40,47 +38,30 @@ class Member(BaseModel):
     role: Role
 
 
+def find_workspace(connection: Connection, workspace_id: UUID, actor: UUID) -> Workspace:
+    row = (
+        connection.execute(
+            text("""
+            SELECT w.id, w.name, m.role
+            FROM demoforge.workspaces w
+            JOIN demoforge.memberships m ON m.workspace_id = w.id
+            WHERE w.id = :workspace_id AND m.user_id = :actor
+        """),
+            {"workspace_id": workspace_id, "actor": actor},
+        )
+        .mappings()
+        .one_or_none()
+    )
+    if row is None:
+        raise HTTPException(404, "Workspace not found")
+    return Workspace.model_validate(row)
+
+
 def workspace_router(engine: Engine | None, verifier: TokenVerifier) -> APIRouter:
     router = APIRouter(prefix="/v1/workspaces", tags=["workspaces"])
-    bearer = HTTPBearer(auto_error=False)
-
-    def authenticate(
-        credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)],
-    ) -> UUID:
-        if credentials is None:
-            raise HTTPException(401, "Sign-in required", headers={"WWW-Authenticate": "Bearer"})
-        return verifier.subject(credentials.credentials)
-
+    authenticate, transaction = access_dependencies(engine, verifier)
     Actor = Annotated[UUID, Depends(authenticate)]
-
-    def transaction(actor: Actor) -> Iterator[Connection]:
-        if engine is None:
-            raise HTTPException(503, "Workspace service unavailable")
-        try:
-            with workspace_transaction(engine, actor) as connection:
-                yield connection
-        except DatabaseIdentityError:
-            raise HTTPException(503, "Workspace service unavailable") from None
-
     Database = Annotated[Connection, Depends(transaction, scope="function")]
-
-    def find_workspace(connection: Connection, workspace_id: UUID, actor: UUID) -> Workspace:
-        row = (
-            connection.execute(
-                text("""
-                SELECT w.id, w.name, m.role
-                FROM demoforge.workspaces w
-                JOIN demoforge.memberships m ON m.workspace_id = w.id
-                WHERE w.id = :workspace_id AND m.user_id = :actor
-            """),
-                {"workspace_id": workspace_id, "actor": actor},
-            )
-            .mappings()
-            .one_or_none()
-        )
-        if row is None:
-            raise HTTPException(404, "Workspace not found")
-        return Workspace.model_validate(row)
 
     def require_admin(connection: Connection, workspace_id: UUID, actor: UUID) -> None:
         if find_workspace(connection, workspace_id, actor).role != Role.ADMIN:

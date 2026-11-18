@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DemoForge AI job message v1",
+  "type": "object",
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "job_id": { "type": "string", "format": "uuid" }
+  },
+  "required": ["schema_version", "job_id"],
+  "additionalProperties": false
+}

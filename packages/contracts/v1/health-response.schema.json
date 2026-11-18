@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DemoForge AI health response v1",
+  "type": "object",
+  "properties": {
+    "status": { "enum": ["ok", "unavailable"] }
+  },
+  "required": ["status"],
+  "additionalProperties": false
+}

@@ -1,0 +1,43 @@
+[project]
+name = "demoforge-ai"
+version = "0.0.0"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "alembic>=1.16,<2",
+  "fastapi>=0.122,<1",
+  "psycopg[binary]>=3.2,<4",
+  "pydantic>=2.12,<3",
+  "pydantic-settings>=2.12,<3",
+  "sqlalchemy>=2.0,<2.1",
+  "uvicorn>=0.38,<1",
+]
+
+[dependency-groups]
+dev = [
+  "httpx2>=2.16,<3",
+  "jsonschema>=4.25,<5",
+  "mypy>=1.19,<2",
+  "pytest>=9,<10",
+  "ruff>=0.14,<1",
+  "types-jsonschema>=4.25,<5",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["services/api", "services/worker"]
+
+[tool.mypy]
+strict = true
+mypy_path = ["services/api", "services/worker"]
+files = ["services/api", "services/worker", "tests"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+extend-exclude = [".next", "node_modules"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]

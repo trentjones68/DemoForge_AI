@@ -1,0 +1,23 @@
+name: demoforge-ai
+
+services:
+  db:
+    image: postgres:17-bookworm@sha256:40865bc877a289da75963d97d72b59633f639fc5af7a4e856bfa3714cae5b536
+    environment:
+      POSTGRES_DB: demoforge
+      POSTGRES_USER: demoforge
+      POSTGRES_PASSWORD: ${LOCAL_POSTGRES_PASSWORD:?Copy .env.example to .env for local development}
+      POSTGRES_API_PASSWORD: ${LOCAL_POSTGRES_API_PASSWORD:?Copy .env.example to .env for local development}
+    ports:
+      - "127.0.0.1:${LOCAL_POSTGRES_PORT:-5433}:5432"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "demoforge", "-d", "demoforge"]
+      interval: 2s
+      timeout: 2s
+      retries: 20
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./infra/postgres/init-api-role.sh:/docker-entrypoint-initdb.d/init-api-role.sh:ro
+
+volumes:
+  postgres-data:

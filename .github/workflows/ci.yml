@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.13.6"
+          enable-cache: true
+      - run: npm install --global npm@11.9.0
+      - run: uv python install
+      - run: make install
+      - run: make check
+      - run: make build
+      - name: Start dependencies and verify migrations
+        run: |
+          cp .env.example .env
+          make db-up migrate
+          uv run --locked alembic downgrade base
+          make migrate
+          uv run --locked alembic current --check-heads
+      - name: Smoke test production web and API
+        run: |
+          npm run start --workspace @demoforge/web -- --hostname 127.0.0.1 &
+          web_pid=$!
+          uv run --locked uvicorn demoforge_api.main:create_app --factory --app-dir services/api &
+          api_pid=$!
+          trap 'kill "$web_pid" "$api_pid" 2>/dev/null || true' EXIT
+          curl -fsS --retry 15 --retry-delay 1 --retry-connrefused http://127.0.0.1:3000/ -o /dev/null
+          curl -fsS --retry 15 --retry-delay 1 --retry-connrefused http://127.0.0.1:8000/health/live -o /dev/null
+          make smoke
+      - if: always()
+        run: |
+          if [ -f .env ]; then make db-down; fi

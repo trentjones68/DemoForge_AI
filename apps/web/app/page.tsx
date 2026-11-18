@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { Card, CardContent } from "@/components/ui/card";
 
 export default function Home() {
@@ -11,6 +13,9 @@ export default function Home() {
           <p className="text-muted-foreground max-w-md text-lg leading-relaxed">
             Turn discovery evidence into reviewed requirements and demo storyboards.
           </p>
+          <Link href="/sign-in" className="inline-block rounded-md bg-foreground px-4 py-2 font-medium text-background">
+            Sign in
+          </Link>
         </CardContent>
       </Card>
     </main>

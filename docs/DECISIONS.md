@@ -84,6 +84,9 @@ Names below are proposed contract names. M0 documents the minimum it actually co
 
 ## Open questions and blockers
 
+The [identity guide](IDENTITY.md) records the implemented Foundation role
+matrix. Feature-specific permissions and invitation delivery remain open.
+
 | ID | Decision needed | Blocks | Proposed owner |
 | --- | --- | --- | --- |
 | Q1 | Approve onboarding, invitation and role/ownership matrix. Define admin vs product admin, sales engineer access to peers' opportunities, viewer access to transcripts and exports, and member revocation semantics. Prove transaction-scoped RLS and Storage identity works with chosen connection pooling. | M1 authorization and subsequent tenant features | Product and engineering |

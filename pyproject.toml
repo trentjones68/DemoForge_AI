@@ -8,6 +8,7 @@ dependencies = [
   "psycopg[binary]>=3.2,<4",
   "pydantic>=2.12,<3",
   "pydantic-settings>=2.12,<3",
+  "pyjwt[crypto]>=2.12,<3",
   "sqlalchemy>=2.0,<2.1",
   "uvicorn>=0.38,<1",
 ]
@@ -28,6 +29,10 @@ package = false
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["services/api", "services/worker"]
+markers = [
+  "integration: requires an explicitly configured disposable database",
+  "supabase: requires a disposable Supabase Auth and Storage stack",
+]
 
 [tool.mypy]
 strict = true

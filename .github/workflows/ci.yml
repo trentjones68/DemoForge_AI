@@ -30,10 +30,12 @@ jobs:
       - name: Start dependencies and verify migrations
         run: |
           cp .env.example .env
-          make db-up migrate
-          uv run --locked alembic downgrade base
-          make migrate
-          uv run --locked alembic current --check-heads
+          make db-up
+          make migrate REVISION=0002
+          uv run --locked alembic downgrade 0001
+          make migrate REVISION=0002
+          uv run --locked alembic current | grep -E '^0002( |$)'
+          make test-integration
       - name: Smoke test production web and API
         run: |
           npm run start --workspace @demoforge/web -- --hostname 127.0.0.1 &
@@ -47,3 +49,25 @@ jobs:
       - if: always()
         run: |
           if [ -f .env ]; then make db-down; fi
+
+  supabase-integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.13.6"
+          enable-cache: true
+      - uses: supabase/setup-cli@v1
+        with:
+          version: "2.80.0"
+      - run: uv sync --locked
+      - name: Verify Supabase Auth, Storage and migration rollback
+        run: |
+          umask 077
+          trap 'rm -f "$RUNNER_TEMP/supabase-status.json" "$RUNNER_TEMP/supabase-start.log"' EXIT
+          supabase start > "$RUNNER_TEMP/supabase-start.log" 2>&1
+          supabase status -o json > "$RUNNER_TEMP/supabase-status.json"
+          uv run --locked python tests/run_local_supabase.py "$RUNNER_TEMP/supabase-status.json"
+      - if: always()
+        run: supabase stop --no-backup

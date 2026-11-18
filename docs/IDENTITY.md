@@ -75,7 +75,7 @@ retention, and data-handling controls.
 Revision `0002` introduces the workspace tables, roles, and RLS. Revision
 `0003` links membership to Supabase Auth users and creates the private Storage
 bucket and policies. Use `make migrate REVISION=0002` only for bare Compose
-Postgres tests. A full application deployment requires `0003`. Review existing
+Postgres tests. Full identity setup requires `0003`. Review existing
 test data before upgrading from a bare database. Supabase rejects membership
 rows without corresponding accounts.
 

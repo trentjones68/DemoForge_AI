@@ -17,7 +17,7 @@ export const roleLabels = {
   viewer: "Viewer",
 };
 
-export const requireSession = cache(async function requireSession() {
+export const requireIdentity = cache(async function requireIdentity() {
   const supabase = await createSupabaseClient();
   if (!supabase) {
     redirect("/sign-in?error=unavailable");
@@ -32,18 +32,30 @@ export const requireSession = cache(async function requireSession() {
   if (!session) {
     redirect("/sign-in");
   }
-  return session.access_token;
+  return { token: session.access_token, userId: user.id };
 });
 
+export async function requireSession() {
+  return (await requireIdentity()).token;
+}
+
 export async function workspaceRequest(token: string, path = "", input?: { name: string }) {
+  return workspaceApi(token, path, input ? { method: "POST", body: input } : undefined);
+}
+
+export async function workspaceApi(
+  token: string,
+  path: string,
+  request?: { method: "POST" | "PUT"; body: object },
+) {
   const baseUrl = process.env.API_BASE_URL ?? "http://127.0.0.1:8000";
   const response = await fetch(new URL(`/v1/workspaces${path}`, baseUrl), {
-    method: input ? "POST" : "GET",
+    method: request?.method ?? "GET",
     headers: {
       Authorization: `Bearer ${token}`,
-      ...(input ? { "Content-Type": "application/json" } : {}),
+      ...(request ? { "Content-Type": "application/json" } : {}),
     },
-    body: input ? JSON.stringify(input) : undefined,
+    body: request ? JSON.stringify(request.body) : undefined,
     cache: "no-store",
     signal: AbortSignal.timeout(7000),
   });

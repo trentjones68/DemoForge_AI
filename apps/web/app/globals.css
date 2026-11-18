@@ -2,12 +2,35 @@
 
 :root {
   color-scheme: light;
-  --background: oklch(0.97 0.01 220);
-  --foreground: oklch(0.22 0.04 235);
-  --card: oklch(1 0 0);
+  --background: #f4f6fa;
+  --foreground: #15233a;
+  --card: #ffffff;
   --card-foreground: var(--foreground);
-  --border: oklch(0.87 0.02 220);
-  --muted-foreground: oklch(0.42 0.035 235);
+  --border: #dce3ed;
+  --input-border: #808da3;
+  --muted-foreground: #4e5e75;
+  --brand: #2245ba;
+  --brand-foreground: #ffffff;
+  --accent: #e9efff;
+  --accent-foreground: #243b91;
+  --danger: #a02234;
+  --danger-background: #fbecef;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --background: #0e1728;
+  --foreground: #edf2ff;
+  --card: #172338;
+  --border: #36465e;
+  --input-border: #75839c;
+  --muted-foreground: #afbdd2;
+  --brand: #a8baff;
+  --brand-foreground: #101c3d;
+  --accent: #283a69;
+  --accent-foreground: #e3ebff;
+  --danger: #ffc2cc;
+  --danger-background: #502635;
 }
 
 @theme inline {
@@ -16,15 +39,36 @@
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
   --color-border: var(--border);
+  --color-input-border: var(--input-border);
   --color-muted-foreground: var(--muted-foreground);
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-danger: var(--danger);
+  --color-danger-background: var(--danger-background);
 }
 
 @layer base {
-  * {
-    @apply border-border;
-  }
+  * { @apply border-border; }
+  body { @apply bg-background font-sans text-foreground antialiased; }
+  :focus-visible { @apply outline-2 outline-offset-2 outline-brand; }
+}
 
-  body {
-    @apply bg-background text-foreground antialiased;
+@layer components {
+  .button-primary {
+    @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-brand px-3.5 py-2 text-sm font-semibold text-brand-foreground transition-opacity hover:opacity-85 disabled:cursor-wait disabled:opacity-60;
+  }
+  .button-secondary {
+    @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border bg-card px-3.5 py-2 text-sm font-semibold transition-colors hover:bg-accent disabled:cursor-wait disabled:opacity-60;
+  }
+  .theme-option {
+    @apply flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground aria-pressed:bg-accent aria-pressed:text-accent-foreground;
+  }
+  .opportunity-field {
+    @apply block w-full min-w-0 rounded-lg border border-input-border bg-card px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground aria-invalid:border-danger;
+  }
+  .opportunity-panel {
+    @apply rounded-xl border bg-card;
   }
 }

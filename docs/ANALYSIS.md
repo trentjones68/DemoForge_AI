@@ -99,7 +99,8 @@ membership, fabricated citations, provider retries and approval conflicts.
 
 ## Rollback
 
-Disable analysis in the API and stop the worker. Back up analysis jobs, source
+If planning is deployed, complete its [rollback](PLANNING.md#setup-verification-and-rollback)
+before downgrading analysis. Disable analysis in the API and stop the worker. Back up analysis jobs, source
 snapshots, findings, evidence and approvals before downgrading. Run
 `uv run --locked alembic downgrade 0005` with the migration credential. This
 removes analysis history and worker grants. Revision `0005` preserves the

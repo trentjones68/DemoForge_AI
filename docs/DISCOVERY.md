@@ -80,7 +80,8 @@ because the local CLI includes credentials.
 
 ## Rollback
 
-Stop discovery traffic and back up the revision `0005` tables and private
+If analysis is deployed, complete its [rollback](ANALYSIS.md#rollback) before
+downgrading ingestion. Stop discovery traffic and back up the revision `0005` tables and private
 originals together. Confirm the restore plan before removing records. Empty and
 delete the `discovery-originals` bucket through the Storage API, then run
 `uv run --locked alembic downgrade 0004`. The migration refuses rollback while

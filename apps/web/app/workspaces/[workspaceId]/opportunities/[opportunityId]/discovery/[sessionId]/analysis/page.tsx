@@ -40,7 +40,10 @@ export default async function AnalysisPage({
           <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Discovery analysis</h1>
           <p className="text-sm text-muted-foreground">Check each finding against its evidence before approving it.</p>
         </div>
-        {context.canWrite && overview.enabled && <StartAnalysis params={identifiers} disabled={activeRun} />}
+        <div className="flex flex-wrap gap-2">
+          <Link href={`${context.sessionHref}/plan`} className="button-secondary">Requirements and gaps</Link>
+          {context.canWrite && overview.enabled && <StartAnalysis params={identifiers} disabled={activeRun} />}
+        </div>
       </header>
       {!overview.enabled && (
         <p className="opportunity-panel p-5 text-sm">Analysis is disabled in this environment. Existing findings remain available for review.</p>

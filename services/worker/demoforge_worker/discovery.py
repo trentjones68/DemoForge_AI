@@ -52,6 +52,20 @@ class SyntheticProvider:
                     "evidence": [cite(pain)],
                 }
             )
+        prefix = "Synthetic requirement:"
+        for segment in [s for s in segments if s.text.startswith(prefix)][:10]:
+            statement = segment.text.strip().removeprefix(prefix).strip()[:300]
+            if statement:
+                findings.append(
+                    {
+                        "kind": "requirement",
+                        "classification": "direct",
+                        "statement": statement,
+                        "rationale": "The fixture explicitly records a requirement.",
+                        "confidence": 0.9,
+                        "evidence": [cite(segment)],
+                    }
+                )
         if len({s.text.strip() for s in disagreements}) > 1:
             first = disagreements[0]
             other = next(s for s in disagreements if s.text.strip() != first.text.strip())

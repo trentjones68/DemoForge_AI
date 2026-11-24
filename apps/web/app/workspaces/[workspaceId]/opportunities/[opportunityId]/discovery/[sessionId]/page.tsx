@@ -41,9 +41,15 @@ export default async function DiscoverySession({
       <Link href={context.href} className="inline-flex items-center gap-2 text-sm font-semibold text-brand hover:underline">
         <ArrowLeft size={16} aria-hidden="true" /> Discovery sessions
       </Link>
-      <header className="space-y-2">
-        <h1 className="break-words text-3xl font-semibold tracking-tight sm:text-4xl">{session.title}</h1>
-        {session.occurred_on && <p className="text-sm text-muted-foreground">Meeting date <time dateTime={session.occurred_on}>{session.occurred_on}</time></p>}
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div className="min-w-0 space-y-2">
+          <h1 className="break-words text-3xl font-semibold tracking-tight sm:text-4xl">{session.title}</h1>
+          {session.occurred_on && <p className="text-sm text-muted-foreground">Meeting date <time dateTime={session.occurred_on}>{session.occurred_on}</time></p>}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Link href={`${href}/analysis`} className="button-secondary">Discovery analysis</Link>
+          <Link href={`${href}/plan`} className="button-secondary">Requirements and gaps</Link>
+        </div>
       </header>
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
         <div className="space-y-4">

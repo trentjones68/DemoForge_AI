@@ -17,7 +17,9 @@ reads. Viewer and product admin roles have no discovery text or original access.
 
 1. Start disposable local Supabase and set up the separate migration and request
    database logins and JWT verifier per [Identity](IDENTITY.md).
-2. From the root, run `make migrate`. Revision `0005` requires Supabase
+2. Provision the [analysis worker login](ANALYSIS.md#provision-the-worker) for
+   a migration to head, or run `make migrate REVISION=0005` for the ingestion
+   schema alone. Revision `0005` requires Supabase
    Storage and adds `discovery-originals`, a private bucket with a restrictive
    policy that blocks direct browser access. Bare Compose remains at `0002`.
 3. In server-only API settings, set `SUPABASE_STORAGE_URL` to the trusted
@@ -78,7 +80,8 @@ because the local CLI includes credentials.
 
 ## Rollback
 
-Stop discovery traffic and back up the revision `0005` tables and private
+If analysis is deployed, complete its [rollback](ANALYSIS.md#rollback) before
+downgrading ingestion. Stop discovery traffic and back up the revision `0005` tables and private
 originals together. Confirm the restore plan before removing records. Empty and
 delete the `discovery-originals` bucket through the Storage API, then run
 `uv run --locked alembic downgrade 0004`. The migration refuses rollback while

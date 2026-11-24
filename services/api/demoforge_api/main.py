@@ -8,11 +8,13 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy.exc import SQLAlchemyError
 from starlette.middleware.base import RequestResponseEndpoint
 
+from demoforge_api.analysis.routes import analysis_router
 from demoforge_api.auth import TokenVerifier
 from demoforge_api.db import check_database, database_engine
 from demoforge_api.discovery.routes import discovery_router
 from demoforge_api.discovery.storage import DiscoveryStorage
 from demoforge_api.opportunities import opportunity_router
+from demoforge_api.planning.routes import planning_router
 from demoforge_api.settings import Settings
 from demoforge_api.workspaces import workspace_router
 
@@ -60,6 +62,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(workspace_router(engine, verifier))
     app.include_router(opportunity_router(engine, verifier))
     app.include_router(discovery_router(engine, verifier, DiscoveryStorage(configuration)))
+    app.include_router(analysis_router(engine, verifier, configuration))
+    app.include_router(planning_router(engine, verifier))
 
     @app.get("/health/live", response_model=HealthResponse)
     def liveness(response: Response) -> HealthResponse:

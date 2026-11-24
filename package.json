@@ -8,5 +8,8 @@
   },
   "workspaces": [
     "apps/web"
-  ]
+  ],
+  "devDependencies": {
+    "playwright": "1.65.1"
+  }
 }

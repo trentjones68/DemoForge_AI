@@ -68,13 +68,15 @@ retention, and data-handling controls.
    Apply migrations and start `make api` and `make web` in separate terminals.
 
    ```sh
-   make migrate
+   make migrate REVISION=0003
    uv run --locked alembic current --check-heads
    ```
 
 Revision `0002` introduces the workspace tables, roles, and RLS. Revision
 `0003` links membership to Supabase Auth users and creates the private Storage
-bucket and policies. Use `make migrate REVISION=0002` only for bare Compose
+bucket and policies. For head, provision the
+[analysis worker login](ANALYSIS.md#provision-the-worker) before migrating.
+Use `make migrate REVISION=0002` only for bare Compose
 Postgres tests. Full identity setup requires `0003`. Review existing
 test data before upgrading from a bare database. Supabase rejects membership
 rows without corresponding accounts.

@@ -74,3 +74,6 @@ Back up workspace data and objects before a database downgrade. See the
 
 See [Discovery ingestion](docs/DISCOVERY.md) for upload and paste setup, private
 originals, limits, verification, and rollback.
+
+See [Discovery analysis](docs/ANALYSIS.md) for the separate worker, provider
+configuration, evidence review, and rollback.

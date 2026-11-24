@@ -41,12 +41,14 @@ def main() -> None:
     service_key: str = status["SERVICE_ROLE_KEY"]
 
     password = secrets.token_urlsafe(32)
+    worker_password = secrets.token_urlsafe(32)
     with psycopg.connect(admin.render_as_string(hide_password=False)) as connection:
         exists = connection.execute(
             """
             SELECT to_regnamespace('demoforge') IS NOT NULL
                 OR to_regclass('public.alembic_version') IS NOT NULL
-                OR EXISTS (SELECT FROM pg_roles WHERE rolname = 'demoforge_api')
+                OR EXISTS (SELECT FROM pg_roles
+                           WHERE rolname IN ('demoforge_api', 'demoforge_worker'))
             """
         ).fetchone()
         if exists is None or exists[0]:
@@ -57,6 +59,13 @@ def main() -> None:
             ).format(sql.Literal(password))
         )
 
+        connection.execute(
+            sql.SQL(
+                "CREATE ROLE demoforge_worker LOGIN NOINHERIT NOSUPERUSER NOBYPASSRLS PASSWORD {}"
+            ).format(sql.Literal(worker_password))
+        )
+
+    worker = admin.set(username="demoforge_worker", password=worker_password)
     request = admin.set(username="demoforge_api", password=password)
     env = os.environ | {
         "DATABASE_URL": request.set(drivername="postgresql+psycopg").render_as_string(
@@ -66,6 +75,9 @@ def main() -> None:
             hide_password=False
         ),
         "TEST_SUPABASE_STATUS_FILE": str(args.status),
+        "DISCOVERY_WORKER_DATABASE_URL": worker.set(
+            drivername="postgresql+psycopg"
+        ).render_as_string(hide_password=False),
     }
 
     subprocess.run([sys.executable, "-m", "alembic", "upgrade", "head"], env=env, check=True)

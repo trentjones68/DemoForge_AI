@@ -1,4 +1,4 @@
-from typing import Self
+from typing import Literal, Self
 
 from pydantic import HttpUrl, PostgresDsn, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -15,6 +15,10 @@ class Settings(BaseSettings):
     supabase_jwt_secret: SecretStr | None = None
     supabase_storage_url: HttpUrl | None = None
     supabase_storage_service_key: SecretStr | None = None
+    discovery_provider: Literal["disabled", "openai", "fake"] = "disabled"
+    discovery_synthetic_dev: bool = False
+    discovery_worker_database_url: PostgresDsn | None = None
+    openai_api_key: SecretStr | None = None
 
     @model_validator(mode="after")
     def check_signing_configuration(self) -> Self:
@@ -40,4 +44,6 @@ class Settings(BaseSettings):
             or (storage.scheme != "https" and storage.host not in ("localhost", "127.0.0.1"))
         ):
             raise ValueError("Use a trusted HTTPS Storage URL or a local development endpoint")
+        if self.discovery_provider == "fake" and not self.discovery_synthetic_dev:
+            raise ValueError("Enable synthetic development mode to use the fake provider")
         return self

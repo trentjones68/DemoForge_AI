@@ -46,18 +46,25 @@ export async function workspaceRequest(token: string, path = "", input?: { name:
 export async function workspaceApi(
   token: string,
   path: string,
-  request?: { method: "POST" | "PUT"; body: object },
+  request?:
+    | { method: "POST" | "PUT"; body: object }
+    | { method: "POST"; raw: BodyInit; headers: Record<string, string> },
 ) {
   const baseUrl = process.env.API_BASE_URL ?? "http://127.0.0.1:8000";
+  const raw = request && "raw" in request ? request : undefined;
+  const json = request && "body" in request ? request : undefined;
   const response = await fetch(new URL(`/v1/workspaces${path}`, baseUrl), {
     method: request?.method ?? "GET",
     headers: {
       Authorization: `Bearer ${token}`,
-      ...(request ? { "Content-Type": "application/json" } : {}),
+      ...(json ? { "Content-Type": "application/json" } : raw?.headers),
     },
-    body: request ? JSON.stringify(request.body) : undefined,
+    body: json ? JSON.stringify(json.body) : raw?.raw,
     cache: "no-store",
-    signal: AbortSignal.timeout(7000),
+    signal: AbortSignal.timeout(raw ? 25000 : 7000),
+  }).catch((error: unknown) => {
+    if (!raw) throw error;
+    return new Response(null, { status: 503 });
   });
 
   if (response.status === 401) {

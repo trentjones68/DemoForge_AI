@@ -11,6 +11,7 @@ def database_engine(dsn: PostgresDsn) -> Engine:
     return create_engine(
         str(dsn),
         pool_pre_ping=True,
+        hide_parameters=True,
         connect_args={"connect_timeout": 2, "options": "-c statement_timeout=2000"},
     )
 

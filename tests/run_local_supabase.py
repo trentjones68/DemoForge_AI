@@ -15,14 +15,16 @@ from psycopg import sql
 from sqlalchemy.engine import make_url
 
 
-def delete_empty_bucket(api_url: str, service_key: str) -> None:
+def delete_empty_bucket(api_url: str, service_key: str, bucket: str = "workspace-files") -> None:
     response = httpx2.delete(
-        f"{api_url.rstrip('/')}/storage/v1/bucket/workspace-files",
+        f"{api_url.rstrip('/')}/storage/v1/bucket/{bucket}",
         headers={"apikey": service_key, "Authorization": f"Bearer {service_key}"},
         timeout=10,
     )
     if not response.is_success:
-        raise SystemExit(f"Could not delete the empty test bucket (HTTP {response.status_code})")
+        raise SystemExit(
+            f"Could not delete the empty test bucket {bucket} (HTTP {response.status_code})"
+        )
 
 
 def main() -> None:
@@ -68,9 +70,11 @@ def main() -> None:
 
     subprocess.run([sys.executable, "-m", "alembic", "upgrade", "head"], env=env, check=True)
     subprocess.run([sys.executable, "-m", "pytest", "-m", "supabase"], env=env, check=True)
+    delete_empty_bucket(api_url, service_key, "discovery-originals")
     delete_empty_bucket(api_url, service_key)
     subprocess.run([sys.executable, "-m", "alembic", "downgrade", "0002"], env=env, check=True)
     subprocess.run([sys.executable, "-m", "alembic", "upgrade", "head"], env=env, check=True)
+    delete_empty_bucket(api_url, service_key, "discovery-originals")
     delete_empty_bucket(api_url, service_key)
     subprocess.run([sys.executable, "-m", "alembic", "downgrade", "base"], env=env, check=True)
 

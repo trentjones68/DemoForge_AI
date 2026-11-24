@@ -71,3 +71,6 @@ Back up workspace data and objects before a database downgrade. See the
 [Architecture and milestone plan](docs/DECISIONS.md) · [Engineering instructions](AGENTS.md)
 
 [Opportunities dashboard setup and verification](docs/OPPORTUNITIES.md)
+
+See [Discovery ingestion](docs/DISCOVERY.md) for upload and paste setup, private
+originals, limits, verification, and rollback.

@@ -1,4 +1,4 @@
-import { ArrowLeft, Building2, Pencil } from "lucide-react";
+import { ArrowLeft, Building2, FileText, Pencil } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
@@ -51,6 +51,11 @@ export default async function OpportunityDetail({
             <Field label="Target demo date">{formatDemoDate(item.demo_date)}</Field>
             <Field label="Owner"><span title={item.owner_id ?? undefined}>{ownerLabel(item.owner_id, context.userId)}</span></Field>
           </dl>
+          {(context.workspace.role === "admin" || context.workspace.role === "sales_engineer") && (
+            <Link href={`${context.base}/${item.id}/discovery`} className="button-secondary w-full">
+              <FileText size={16} aria-hidden="true" /> Discovery sessions
+            </Link>
+          )}
           {editable && <ArchiveForm workspaceId={workspaceId} opportunity={item} />}
         </div>
       </div>

@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     supabase_jwks_url: HttpUrl | None = None
     supabase_jwt_audience: str = "authenticated"
     supabase_jwt_secret: SecretStr | None = None
+    supabase_storage_url: HttpUrl | None = None
+    supabase_storage_service_key: SecretStr | None = None
 
     @model_validator(mode="after")
     def check_signing_configuration(self) -> Self:
@@ -27,4 +29,15 @@ class Settings(BaseSettings):
             self.supabase_jwks_url is not None or self.supabase_jwt_secret is not None
         ):
             raise ValueError("Configure SUPABASE_JWT_ISSUER for token verification")
+        storage = self.supabase_storage_url
+        if (storage is None) != (self.supabase_storage_service_key is None):
+            raise ValueError("Configure both the Storage URL and server-side key")
+        if storage is not None and (
+            storage.username is not None
+            or storage.password is not None
+            or storage.query is not None
+            or storage.fragment is not None
+            or (storage.scheme != "https" and storage.host not in ("localhost", "127.0.0.1"))
+        ):
+            raise ValueError("Use a trusted HTTPS Storage URL or a local development endpoint")
         return self

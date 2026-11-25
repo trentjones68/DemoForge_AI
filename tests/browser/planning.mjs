@@ -8,6 +8,8 @@ const config = JSON.parse(input);
 const executablePath = process.env.DEMOFORGE_BROWSER_EXECUTABLE;
 const browser = await chromium.launch(executablePath ? { executablePath } : {});
 const plan = new URL(config.plan, config.base).href;
+const catalog = new URL(`${config.plan.split("/opportunities/")[0]}/catalog`, config.base).href;
+const mappings = new URL(`${config.plan.split("/discovery/")[0]}/capability-mappings`, config.base).href;
 
 async function signIn(account) {
   const page = await browser.newPage({ viewport: { width: 390, height: 840 } });
@@ -20,6 +22,61 @@ async function signIn(account) {
     page.getByRole("button", { name: "Sign in" }).click(),
   ]);
   return page;
+}
+
+async function verifyCatalogAndMapping(page) {
+  await page.goto(catalog);
+  await page.locator("summary").filter({ hasText: /^Add product release$/ }).click();
+  await page.getByLabel("Product", { exact: true }).fill("Synthetic Audit");
+  await page.getByLabel("Version", { exact: true }).fill("2026.1");
+  await page.getByRole("button", { name: "Create release" }).click();
+  await page.locator("summary").filter({ hasText: /^Add capability$/ }).click();
+  const form = page.getByRole("form", { name: "Add capability" });
+  await form.getByLabel("Capability name").fill("Report export");
+  await form.getByLabel("Support status").selectOption("supported");
+  await form.getByLabel("Description").fill("The audit report can be exported on a monthly schedule.");
+  await form.getByLabel("Exact requirement phrases").fill(config.statement);
+  await form.getByLabel("Document title").fill("Synthetic release guide");
+  await form.getByLabel("Section or anchor").fill("Export");
+  await form.getByLabel("HTTPS documentation URL").fill("https://docs.example.test/guide#export");
+  await form.getByRole("button", { name: "Create capability" }).click();
+  const entry = page.getByRole("article").filter({
+    has: page.getByRole("heading", { name: "Report export", exact: true }),
+  });
+  await entry.waitFor();
+  await page.getByRole("searchbox", { name: "Search capabilities" }).fill("export");
+  await Promise.all([
+    page.waitForURL((url) => url.searchParams.get("q") === "export"),
+    page.getByRole("button", { name: "Search catalog" }).click(),
+  ]);
+  await entry.waitFor();
+
+  await page.goto(mappings);
+  const mapping = page.getByRole("article").filter({
+    has: page.getByRole("heading", { name: config.statement, exact: true }),
+  });
+  const generate = page.getByRole("button", { name: "Generate mapping drafts" });
+  await generate.focus();
+  await page.keyboard.press("Enter");
+  await mapping.getByText("Draft · Mapping r1", { exact: true }).waitFor();
+  await mapping.getByText("Supported", { exact: true }).first().waitFor();
+  const source = mapping.getByRole("link", { name: "Synthetic release guide" });
+  assert.equal(await source.getAttribute("href"), "https://docs.example.test/guide#export");
+  const confirm = mapping.getByRole("button", { name: "Confirm this mapping revision" });
+  await confirm.click();
+  await mapping.getByText("Reviewed · Mapping r1", { exact: true }).waitFor();
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+
+  await page.goto(catalog);
+  await entry.locator("summary").filter({ hasText: /^Edit capability$/ }).click();
+  const edit = entry.getByRole("form", { name: "Edit capability" });
+  await edit.getByLabel("Support status").selectOption("unknown");
+  await edit.getByRole("button", { name: "Save new revision" }).click();
+  await entry.getByText("Unknown", { exact: true }).filter({ visible: true }).waitFor();
+  await page.goto(mappings);
+  await mapping.getByText("Stale catalog evidence", { exact: true }).waitFor();
+  await source.waitFor();
+  assert.equal(await confirm.count(), 0);
 }
 
 try {
@@ -72,6 +129,7 @@ try {
   await history.getByText("Revision 2 · Draft").waitFor();
   await history.getByText("Revision 1 · Approved").waitFor();
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+  await verifyCatalogAndMapping(page);
 
   const peer = await signIn(config.peer);
   await peer.goto(plan);
@@ -79,12 +137,19 @@ try {
   assert.equal(await peer.getByRole("button", { name: "Generate drafts" }).count(), 0);
   assert.equal(await peer.getByText("Edit item", { exact: true }).count(), 0);
   assert.equal(await peer.getByRole("button", { name: "Approve this revision" }).count(), 0);
+  await peer.goto(mappings);
+  await peer.getByText("Stale catalog evidence", { exact: true }).waitFor();
+  assert.equal(await peer.getByRole("button", { name: "Generate mapping drafts" }).count(), 0);
+  assert.equal(await peer.getByText("Edit mapping", { exact: true }).count(), 0);
 
   const outsider = await signIn(config.outsider);
   await outsider.goto(plan);
   await outsider.getByRole("heading", { name: "Opportunity not found" }).waitFor();
   assert.equal(await outsider.getByText(config.statement, { exact: true }).count(), 0);
-  console.log("Planning browser checks passed for draft generation, evidence, approval, edits, history, and permissions.");
+  await outsider.goto(mappings);
+  await outsider.getByRole("heading", { name: "Opportunity not found" }).waitFor();
+  assert.equal(await outsider.getByText(config.statement, { exact: true }).count(), 0);
+  console.log("Planning and catalog browser checks passed for evidence, review, revisions, and permissions.");
 } finally {
   await browser.close();
 }

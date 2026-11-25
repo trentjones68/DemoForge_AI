@@ -24,9 +24,16 @@ export default async function Workspace({
       <Link href="/workspaces" className="text-sm font-medium underline">Switch workspace</Link>
       <h1 className="text-3xl font-semibold tracking-tight break-words">{workspace.name}</h1>
       <p className="text-muted-foreground">{roleLabels[workspace.role]}</p>
-      <Link href={`/workspaces/${workspace.id}/opportunities`} className="button-primary">
-        Open opportunities
-      </Link>
+      <div className="flex flex-wrap gap-3">
+        <Link href={`/workspaces/${workspace.id}/opportunities`} className="button-primary">
+          Open opportunities
+        </Link>
+        {workspace.role !== "viewer" && (
+          <Link href={`/workspaces/${workspace.id}/catalog`} className="button-secondary">
+            Product capability catalog
+          </Link>
+        )}
+      </div>
     </div>
   );
 }

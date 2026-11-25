@@ -52,9 +52,14 @@ export default async function OpportunityDetail({
             <Field label="Owner"><span title={item.owner_id ?? undefined}>{ownerLabel(item.owner_id, context.userId)}</span></Field>
           </dl>
           {(context.workspace.role === "admin" || context.workspace.role === "sales_engineer") && (
-            <Link href={`${context.base}/${item.id}/discovery`} className="button-secondary w-full">
-              <FileText size={16} aria-hidden="true" /> Discovery sessions
-            </Link>
+            <>
+              <Link href={`${context.base}/${item.id}/discovery`} className="button-secondary w-full">
+                <FileText size={16} aria-hidden="true" /> Discovery sessions
+              </Link>
+              <Link href={`${context.base}/${item.id}/capability-mappings`} className="button-secondary w-full">
+                Capability mapping
+              </Link>
+            </>
           )}
           {editable && <ArchiveForm workspaceId={workspaceId} opportunity={item} />}
         </div>

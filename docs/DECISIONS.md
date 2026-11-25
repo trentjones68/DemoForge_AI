@@ -14,7 +14,7 @@ The documents describe a coherent discovery-to-export workflow and a viable stac
 | The PRD accepts inferences or unknowns, while the build prompts require actual evidence for asserted findings. Approval targets vary between insights and requirements. Some storyboard inputs are described as mappings without review. | Use evidence classes, two explicit approvals, and pinned reviewed mappings. Prevent generated claims and stale approvals from silently flowing into a demo. See D4. |
 | The PRD requires editing, regeneration and export but lacks rules for concurrent edits, duration changes and export readiness. | Treat generation as proposals, pin revisions, and enforce approved-only release export as a proposed MVP default. See D4 and Q2. |
 | Job rows omit dispatch, ownership leases and retry mechanics. The API has a job-read path but no retry contract. | Specify durable dispatch, recovery, authorized retry and redacted failure semantics before introducing analysis. See D5. |
-| The Plaud contract is conceptual. Prompt 10 suggests a generic endpoint as a fallback, while the PRD already has manual import. | Ship manual import. Defer public integration endpoints until a supported handoff and authentication are demonstrated. See D6. |
+| The Plaud contract is conceptual. Prompt 10 includes an authenticated fallback for manually obtained text. | Retain manual import and use a signed-in workspace import for JSON text. Gate provider callbacks on a verified handoff and authentication. See D6. |
 | Privacy and security intent is explicit, but consent, parser controls, storage permissions, data residency, retention and deletion have no operational contract. Exports and provider requests extend the exposure boundary. | Resolve data lifecycle and provider terms before production ingestion. Add control tests before each surface ships. See D3, D7 and Q3–Q4. |
 | Basic metrics are listed in MVP and detailed metrics/templates are P1. Performance targets lack a representative workload. | Include redacted operational signals with jobs. Schedule templates and product analytics as separate P1 slices. Validate the PRD targets under a documented staging workload. See M10–M12 and Q7. |
 
@@ -59,6 +59,11 @@ Separate migration, request, background processing and maintenance credentials. 
 ### D6. Verify Plaud before enabling automation
 
 **Baseline.** Manual Plaud transcript/summary import is the Phase 1 baseline. Keep webhooks disabled pending verification. Plaud access, a particular event payload, a public API, and transcript delivery on any plan are unverified.
+
+**Prompt 10 outcome.** The supplied PRD, architecture and build prompts describe
+the intended application interface. They contain no official provider delivery
+contract. The fallback JSON text import uses the same signed-in workspace
+authorization and discovery pipeline as manual upload. [Plaud import and verification record](PLAUD.md)
 
 **Gate.** Collect current official Plaud and intermediary documentation, plan and region availability, and sanitized payload samples from the intended account. Confirm event semantics, whether full transcript, summary or files are delivered, authentication or signature support and a secure alternative if unavailable, event identifiers, timestamps, replay, retry and quotas, and customer authorization and data transfer terms. Reproduce delivery and failure/retry in a sandbox, including workspace binding and dedupe by workspace/provider/external ID with content hash as appropriate. Record the supported contract before opening implementation. Use the manual path if delivery or authentication cannot be established. Keep automation off by default and subject to an explicit enablement decision.
 

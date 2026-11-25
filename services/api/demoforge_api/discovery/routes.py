@@ -1,6 +1,8 @@
 """Authorized ingestion and read-only evidence locators."""
 
 from asyncio import timeout
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import asdict, dataclass
 from datetime import date, datetime
 from hashlib import sha256
@@ -16,6 +18,7 @@ from starlette.requests import ClientDisconnect
 
 from demoforge_api.auth import TokenVerifier
 from demoforge_api.discovery.imports import (
+    MAX_IMPORT_JSON,
     ManualPlaudExport,
     Method,
     Original,
@@ -23,6 +26,7 @@ from demoforge_api.discovery.imports import (
     Provider,
     Segment,
     SourceKind,
+    TextImport,
     manual_original,
     parse_original,
     segment_text,
@@ -163,6 +167,24 @@ def workspace_lock(connection: Connection, workspace: UUID) -> None:
     )
 
 
+@contextmanager
+def upload_slot() -> Iterator[None]:
+    if not UPLOAD_SLOTS.acquire(blocking=False):
+        raise HTTPException(429, "Discovery uploads are busy. Try again shortly.")
+    try:
+        yield
+    finally:
+        UPLOAD_SLOTS.release()
+
+
+async def authorize_import(
+    engine: Engine | None, scope: SessionScope, actor: UUID, request: Request
+) -> None:
+    await run_in_threadpool(preflight, engine, scope, actor)
+    if request.headers.get("x-import-consent") != "true":
+        raise HTTPException(422, "Confirm recording and import consent before uploading.")
+
+
 def discovery_router(
     engine: Engine | None, verifier: TokenVerifier, storage: DiscoveryStorage
 ) -> APIRouter:
@@ -174,6 +196,13 @@ def discovery_router(
     Actor = Annotated[UUID, Depends(authenticate)]
     Database = Annotated[Connection, Depends(database, scope="function")]
     plaud: PlaudImportAdapter = ManualPlaudExport()
+
+    def describe_source(
+        provider: Provider, kind: SourceKind, filename: str | None, mime: str
+    ) -> Original:
+        if provider == "plaud":
+            return plaud.adapt(kind, filename, mime)
+        return manual_original(provider, kind, filename, mime)
 
     @router.get("")
     def list_sessions(
@@ -230,26 +259,61 @@ def discovery_router(
         kind: Annotated[SourceKind, Query()] = "transcript",
         provider: Annotated[Provider, Query()] = "manual",
     ) -> Imported:
-        await run_in_threadpool(preflight, engine, scope, actor)
-        if request.headers.get("x-import-consent") != "true":
-            raise HTTPException(422, "Confirm recording and import consent before uploading.")
+        await authorize_import(engine, scope, actor, request)
         filename = request.headers.get("x-source-filename")
         mime = request.headers.get("content-type", "")
-        original = (
-            plaud.adapt(kind, filename, mime)
-            if provider == "plaud"
-            else manual_original(provider, kind, filename, mime)
-        )
+        original = describe_source(provider, kind, filename, mime)
         storage.require_configured()
-        if not UPLOAD_SLOTS.acquire(blocking=False):
-            raise HTTPException(429, "Discovery uploads are busy. Try again shortly.")
-        try:
+        with upload_slot():
             content = await read_body(request, MAX_UPLOAD)
             result = await run_in_threadpool(
                 persist_import, engine, storage, scope, actor, original, content
             )
-        finally:
-            UPLOAD_SLOTS.release()
+        if result.duplicate:
+            response.status_code = 200
+        return result
+
+    @router.post(
+        "/{session_id}/imports",
+        status_code=201,
+        responses={200: {"model": Imported}},
+        openapi_extra={
+            "parameters": [
+                {
+                    "in": "header",
+                    "name": "X-Import-Consent",
+                    "required": True,
+                    "schema": {"type": "string", "const": "true"},
+                }
+            ],
+            "requestBody": {
+                "required": True,
+                "content": {"application/json": {"schema": TextImport.model_json_schema()}},
+            },
+        },
+    )
+    async def import_text(
+        scope: Scope, actor: Actor, request: Request, response: Response
+    ) -> Imported:
+        """Submit transcript or summary text using the signed-in user's workspace access."""
+        await authorize_import(engine, scope, actor, request)
+        mime = request.headers.get("content-type", "").partition(";")[0].strip().lower()
+        if mime != "application/json":
+            raise HTTPException(415, "Send the source as JSON.")
+        storage.require_configured()
+        with upload_slot():
+            raw = await read_body(request, MAX_IMPORT_JSON)
+            try:
+                payload = TextImport.model_validate_json(raw)
+                content = payload.text.encode("utf-8")
+            except (ValidationError, UnicodeEncodeError):
+                raise HTTPException(
+                    422, "Send valid source kind, text and optional provenance."
+                ) from None
+            original = describe_source(payload.provider, payload.kind, None, "text/plain")
+            result = await run_in_threadpool(
+                persist_import, engine, storage, scope, actor, original, content
+            )
         if result.duplicate:
             response.status_code = 200
         return result

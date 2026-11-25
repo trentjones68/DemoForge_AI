@@ -92,3 +92,6 @@ revision approval, verification, and rollback.
 
 See [Storyboard exports and readiness](docs/EXPORTS.md) for Markdown and PDF
 downloads, preparation and approval gates, rendering setup, and audit events.
+
+See [Plaud imports](docs/PLAUD.md) for the documentation review, manual export
+workflow, and authenticated JSON import contract.

@@ -8,6 +8,9 @@ selected. Every import requires consent attestation. The viewer renders source
 text literally, shows provenance and recognized speaker and time markers, and
 provides a permalink to each segment and a private original download.
 
+Authenticated clients can submit a transcript or summary as JSON to the same
+session. [JSON import contract and manual Plaud workflow](PLAUD.md)
+
 Workspace admins can create sessions and import sources on active opportunities.
 Sales engineers can import on opportunities they own. Admins and sales engineers
 can read discovery records in their own workspace. Archived opportunities allow

@@ -6,17 +6,31 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from threading import BoundedSemaphore
-from typing import Literal, Protocol
+from typing import Annotated, Literal, Protocol
 from urllib.parse import unquote
 from uuid import UUID, uuid5
 
 from fastapi import HTTPException
+from pydantic import BaseModel, ConfigDict, StringConstraints
 
-from demoforge_api.discovery.parser import FORMAT_MIME, MAX_SEGMENTS, SEGMENT_LENGTH
+from demoforge_api.discovery.parser import FORMAT_MIME, MAX_SEGMENTS, MAX_TEXT, SEGMENT_LENGTH
 
 SourceKind = Literal["transcript", "summary"]
 Provider = Literal["manual", "plaud"]
 Method = Literal["paste", "file"]
+
+# A supplementary character can take two six-byte JSON escapes.
+MAX_IMPORT_JSON = MAX_TEXT * 12 + 1024
+
+
+class TextImport(BaseModel):
+    """One authenticated text import into a discovery session."""
+
+    model_config = ConfigDict(extra="forbid", strict=True, hide_input_in_errors=True)
+    kind: SourceKind
+    text: Annotated[str, StringConstraints(min_length=1, max_length=MAX_TEXT)]
+    provider: Provider = "manual"
+
 
 PARSE_SLOTS = BoundedSemaphore(2)
 ERRORS = {

@@ -3,7 +3,7 @@ from uuid import UUID, uuid4
 
 import httpx2
 import pytest
-from demoforge_api.analysis.provider import OPENAI_MODEL, OpenAIProvider
+from demoforge_api.analysis.provider import OPENAI_MODEL, OpenAIProvider, estimate_cost_micros
 from demoforge_api.analysis.schema import (
     MAX_OUTPUT_TOKENS,
     AnalysisFailure,
@@ -105,11 +105,33 @@ def test_openai_adapter_uses_structured_output_with_isolated_data_and_limits() -
             json={
                 "model": OPENAI_MODEL,
                 "choices": [{"finish_reason": "stop", "message": {"content": raw}}],
+                "usage": {"prompt_tokens": 1000, "completion_tokens": 250},
             },
         )
 
     provider = OpenAIProvider(SecretStr("synthetic-placeholder"), httpx2.MockTransport(respond))
-    assert provider.extract(SYNTHETIC) == raw
+    result = provider.extract(SYNTHETIC)
+    assert result.text == raw
+    assert result.usage and (result.usage.input_tokens, result.usage.output_tokens) == (1000, 250)
+    assert estimate_cost_micros(result.usage) == 800
+
+
+def test_rejected_completion_retains_only_reported_numeric_usage() -> None:
+    def respond(_: httpx2.Request) -> httpx2.Response:
+        return httpx2.Response(
+            200,
+            json={
+                "model": OPENAI_MODEL,
+                "choices": [{"finish_reason": "length", "message": {"content": "Private output"}}],
+                "usage": {"prompt_tokens": 1000, "completion_tokens": 250},
+            },
+        )
+
+    provider = OpenAIProvider(SecretStr("synthetic-placeholder"), httpx2.MockTransport(respond))
+    with pytest.raises(AnalysisFailure, match="^invalid_output$") as rejected:
+        provider.extract(SYNTHETIC)
+    assert rejected.value.usage is not None
+    assert estimate_cost_micros(rejected.value.usage) == 800
 
 
 @pytest.mark.parametrize(

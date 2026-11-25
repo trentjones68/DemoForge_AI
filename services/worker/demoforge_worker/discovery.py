@@ -3,19 +3,24 @@
 import argparse
 import json
 import logging
-from time import sleep
+from time import monotonic, sleep
+from typing import Literal
 from uuid import UUID
 
 from demoforge_api.analysis.provider import (
     FAKE_MODEL,
     AnalysisProvider,
+    Completion,
     OpenAIProvider,
+    estimate_cost_micros,
     request_payload,
 )
 from demoforge_api.analysis.schema import (
     MAX_SEGMENTS,
     PROMPT_VERSION,
     AnalysisFailure,
+    FailureCode,
+    TokenUsage,
     TranscriptSegment,
     verify_extraction,
 )
@@ -96,7 +101,7 @@ class SyntheticProvider:
 class Claim(BaseModel):
     job_id: UUID
     lease: UUID
-    provider: str
+    provider: Literal["openai", "fake"]
     model: str
     prompt_version: str
 
@@ -129,6 +134,10 @@ class DiscoveryWorker:
 
         claim = Claim.model_validate(row)
         params = {"job": claim.job_id, "lease": claim.lease}
+        started = monotonic()
+        usage: TokenUsage | None = None
+        code: FailureCode | None = None
+        outcome = "interrupted"
         try:
             if (
                 claim.provider != self.provider.name
@@ -149,20 +158,50 @@ class DiscoveryWorker:
                 raise AnalysisFailure("input_limit")
             # The transport-independent bound also applies to the synthetic provider.
             request_payload(claim.model, segments)
-            findings = verify_extraction(self.provider.extract(segments), segments)
+            result = self.provider.extract(segments)
+            if isinstance(result, Completion):
+                usage = result.usage
+                raw = result.text
+            else:
+                raw = result
+            findings = verify_extraction(raw, segments)
             payload = json.dumps([finding.model_dump(mode="json") for finding in findings])
             with self.engine.begin() as connection:
-                connection.execute(
+                applied = connection.execute(
                     text("SELECT demoforge.complete_analysis(:job, :lease, CAST(:data AS jsonb))"),
                     params | {"data": payload},
                 ).scalar_one()
+            outcome = "succeeded" if applied else "not_applied"
         except AnalysisFailure as error:
+            code = error.code
+            usage = error.usage or usage
             with self.engine.begin() as connection:
-                connection.execute(
+                applied = connection.execute(
                     text("SELECT demoforge.fail_analysis(:job, :lease, :code, :retryable)"),
                     params | {"code": error.code, "retryable": error.retryable},
                 ).scalar_one()
-            logger.info("Discovery analysis attempt ended job=%s code=%s", claim.job_id, error.code)
+            outcome = "failed_attempt" if applied else "not_applied"
+        finally:
+            logger.info(
+                "%s",
+                json.dumps(
+                    {
+                        "event": "discovery_analysis_attempt",
+                        "schema_version": 1,
+                        "job_id": str(claim.job_id),
+                        "provider": claim.provider,
+                        "outcome": outcome,
+                        "error_code": code,
+                        "duration_ms": round((monotonic() - started) * 1000),
+                        "input_tokens": usage.input_tokens if usage else None,
+                        "output_tokens": usage.output_tokens if usage else None,
+                        "estimated_cost_usd_micros": estimate_cost_micros(usage)
+                        if usage
+                        else (0 if claim.provider == "fake" else None),
+                    },
+                    separators=(",", ":"),
+                ),
+            )
         return True
 
 

@@ -97,6 +97,9 @@ secrets. Completion and validated findings commit together.
 worker and API flows, including repeat starts, abandoned leases, revoked
 membership, fabricated citations, provider retries and approval conflicts.
 
+Revision `0011` records terminal job completion times. The worker emits a
+redacted JSON event for each handled attempt. [Telemetry and failure-rate query](RELEASE_VERIFICATION.md#job-telemetry)
+
 ## Rollback
 
 If planning is deployed, complete its [rollback](PLANNING.md#setup-verification-and-rollback)

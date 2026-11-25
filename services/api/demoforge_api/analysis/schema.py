@@ -37,10 +37,19 @@ FailureCode = Literal[
 Statement = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=800)]
 
 
+@dataclass(frozen=True)
+class TokenUsage:
+    input_tokens: int
+    output_tokens: int
+
+
 class AnalysisFailure(Exception):
-    def __init__(self, code: FailureCode, retryable: bool = False) -> None:
+    def __init__(
+        self, code: FailureCode, retryable: bool = False, *, usage: TokenUsage | None = None
+    ) -> None:
         self.code = code
         self.retryable = retryable
+        self.usage = usage
         super().__init__(code)
 
 

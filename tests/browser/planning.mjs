@@ -179,6 +179,15 @@ async function verifyCatalogAndMapping(page) {
 
 try {
   const page = await signIn(config.owner);
+  await page.goto(plan.replace(/\/plan$/, ""));
+  const consent = page.getByRole("checkbox", { name: /I confirm I have permission to use this source/ });
+  await consent.waitFor();
+  assert.equal(await consent.isChecked(), false);
+  assert.match(await consent.getAttribute("aria-describedby"), /\S+/);
+  await page.getByText(/Obtain any required recording consent/).waitFor();
+  await consent.focus();
+  await page.keyboard.press("Space");
+  assert.equal(await consent.isChecked(), true);
   await page.goto(plan);
   const generate = page.getByRole("button", { name: "Generate drafts" });
   assert.equal(await generate.isDisabled(), true);

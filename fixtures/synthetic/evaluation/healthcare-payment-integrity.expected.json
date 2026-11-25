@@ -1,0 +1,50 @@
+{
+  "findings": [
+    {
+      "kind": "pain_point",
+      "classification": "direct",
+      "statement": "A manual claims audit backlog delays payment integrity reviews and makes recovery leakage hard to track.",
+      "evidence_lines": [1]
+    },
+    {
+      "kind": "metric",
+      "classification": "contradictory",
+      "statement": "The speakers report different monthly volumes.",
+      "evidence_lines": [2, 3]
+    },
+    {
+      "kind": "requirement",
+      "classification": "direct",
+      "statement": "Export a monthly audit report from the claims review workflow.",
+      "evidence_lines": [4],
+      "catalog_status": "supported",
+      "mapping_status": "supported"
+    },
+    {
+      "kind": "requirement",
+      "classification": "direct",
+      "statement": "Initiate automatic recovery payments to every health plan.",
+      "evidence_lines": [5],
+      "catalog_status": "unsupported",
+      "mapping_status": "unsupported"
+    },
+    {
+      "kind": "requirement",
+      "classification": "direct",
+      "statement": "Send audit alerts to the fictional intake queue.",
+      "evidence_lines": [6],
+      "mapping_status": "unknown"
+    },
+    {
+      "kind": "unknown",
+      "classification": "unknown",
+      "statement": "The budget has not been established.",
+      "evidence_lines": []
+    }
+  ],
+  "catalog_limitation": "The demo release has no live payment or automatic recovery workflow.",
+  "audience": "Fictional payment integrity reviewers",
+  "target_minutes": 15,
+  "business_outcome": "Validate the fictional claims audit and discuss recovery boundaries.",
+  "edited_talk_track": "Walk through three fictional claim records and reconcile the sample totals."
+}

@@ -53,23 +53,19 @@ make smoke    # Run with web, API and database already running
 
 CI repeats the checks from locked dependencies, verifies migration upgrade
 and downgrade, and runs smoke checks against a built web app and real local
-Postgres. A separate job exercises real Supabase Auth and Storage. The worker scaffold defines a typed broker interface. Broker
-selection, dispatch, retries, and job execution belong to the durable jobs
-milestone.
+Postgres. A separate job exercises local Supabase Auth and Storage, the
+Postgres-backed discovery worker, the synthetic healthcare evaluation, and
+Chromium.
 
 ## Deployment and rollback
 
-Build the web app with `make build` and run its production server with
-`npm run start --workspace @demoforge/web` locally. Vercel is the web deployment
-target. Start the API with
-`uv run --locked --no-dev uvicorn demoforge_api.main:create_app --factory --app-dir services/api --host 0.0.0.0`
-on managed Python hosting. Supply the database URL through the platform's secret
-store. Run `make migrate` separately with a migration credential. The scaffold
-has no worker process to deploy.
+The staging runbook covers Vercel or managed Node for the web app, managed
+FastAPI and worker hosting, Supabase roles and Storage, environment variables,
+launch verification, and rollback. [Staging runbook](docs/STAGING.md)
 
-Roll back a release by restoring the previous compatible web and API versions.
-Back up workspace data and objects before a database downgrade. See the
-[identity rollback procedure](docs/IDENTITY.md#verification-and-rollback).
+The release verification record covers the healthcare evaluation, dependency
+audits, telemetry, and the controls that still require hosted or operator
+verification. [Release verification](docs/RELEASE_VERIFICATION.md)
 
 [Architecture and milestone plan](docs/DECISIONS.md) · [Engineering instructions](AGENTS.md)
 

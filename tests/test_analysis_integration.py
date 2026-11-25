@@ -200,6 +200,11 @@ def check_jobs(
         assert state["run"]["status"] == ("queued" if attempt < 3 else "failed")
         assert state["findings"] == []
         with migration.begin() as connection:
+            completed_at = connection.execute(
+                text("SELECT completed_at FROM demoforge.analysis_jobs WHERE id = :job"),
+                {"job": failing_job},
+            ).scalar_one()
+            assert (completed_at is not None) == (attempt == 3)
             connection.execute(
                 text("""
                 UPDATE demoforge.analysis_jobs SET available_at = statement_timestamp()
@@ -209,6 +214,16 @@ def check_jobs(
             )
     assert start_run(api, failing_path, headers_a) == failing_run
     assert not failing_worker.run_once()
+    with migration.connect() as connection:
+        counts = connection.execute(
+            text("""
+                SELECT count(*), count(*) FILTER (WHERE status = 'failed')
+                FROM demoforge.analysis_jobs
+                WHERE id IN (:succeeded, :failed) AND completed_at >= created_at
+            """),
+            {"succeeded": job, "failed": failing_job},
+        ).one()
+        assert counts == (2, 1)
 
     invalid_path, _ = add_session(api, parent, headers_a)
     invalid_run = start_run(api, invalid_path, headers_a)

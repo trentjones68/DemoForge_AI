@@ -1,6 +1,6 @@
 "use client";
 
-import { startTransition, useActionState, useState } from "react";
+import { startTransition, useActionState, useId, useState } from "react";
 
 import { createSession, importSource } from "./actions";
 
@@ -32,6 +32,7 @@ export function SessionForm({ workspaceId, opportunityId }: { workspaceId: strin
 export function ImportForm({
   workspaceId, opportunityId, sessionId,
 }: { workspaceId: string; opportunityId: string; sessionId: string }) {
+  const consentHelpId = useId();
   const [method, setMethod] = useState("paste");
   const [state, action, pending] = useActionState(
     importSource.bind(null, workspaceId, opportunityId, sessionId), {},
@@ -79,10 +80,16 @@ export function ImportForm({
             <span className="text-xs font-normal text-muted-foreground">TXT, Markdown, DOCX or PDF with selectable text. Up to 2 MiB.</span>
           </label>
         )}
-        <label className="flex items-start gap-2 text-sm">
-          <input type="checkbox" name="consent" required className="mt-0.5 h-4 w-4 shrink-0 accent-brand" />
-          <span>I confirm I have permission to use this recording or document and import it into this workspace.</span>
-        </label>
+        <div className="space-y-1.5">
+          <label className="flex items-start gap-2 text-sm">
+            <input type="checkbox" name="consent" required aria-describedby={consentHelpId}
+              className="mt-0.5 h-4 w-4 shrink-0 accent-brand" />
+            <span>I confirm I have permission to use this source and import it into this workspace.</span>
+          </label>
+          <p id={consentHelpId} className="pl-6 text-xs text-muted-foreground">
+            Obtain any required recording consent before import. Use synthetic content in staging.
+          </p>
+        </div>
         {state.error && <p role="alert" className="text-sm text-danger">{state.error}</p>}
         <button type="submit" className="button-primary">{pending ? "Importing…" : "Import source"}</button>
       </fieldset>

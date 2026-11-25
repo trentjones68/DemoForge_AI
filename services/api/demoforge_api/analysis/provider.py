@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+from dataclasses import dataclass
 from typing import Protocol
 
 import httpx2
@@ -12,6 +13,7 @@ from demoforge_api.analysis.schema import (
     MAX_OUTPUT_TOKENS,
     AnalysisFailure,
     ExtractionDraft,
+    TokenUsage,
     TranscriptSegment,
 )
 
@@ -36,11 +38,33 @@ Use confidence from 0 to 1. Do not claim a product supports a capability.
 Use at most 25 findings. Prefer concise, distinct findings and brief rationales."""
 
 
+@dataclass(frozen=True)
+class Completion:
+    text: str
+    usage: TokenUsage | None
+
+
 class AnalysisProvider(Protocol):
     name: str
     model: str
 
-    def extract(self, segments: list[TranscriptSegment]) -> str: ...
+    def extract(self, segments: list[TranscriptSegment]) -> str | Completion: ...
+
+
+def estimate_cost_micros(usage: TokenUsage) -> int:
+    return (
+        usage.input_tokens * INPUT_MICROS_PER_K + usage.output_tokens * OUTPUT_MICROS_PER_K + 999
+    ) // 1000
+
+
+def reported_usage(value: object) -> TokenUsage | None:
+    if not isinstance(value, dict):
+        return None
+    prompt = value.get("prompt_tokens")
+    completion = value.get("completion_tokens")
+    if type(prompt) is int and type(completion) is int and prompt >= 0 and completion >= 0:
+        return TokenUsage(prompt, completion)
+    return None
 
 
 def provider_schema(schema: dict[str, object]) -> dict[str, object]:
@@ -93,9 +117,7 @@ def request_payload(model: str, segments: list[TranscriptSegment]) -> bytes:
     ).encode("utf-8")
     # UTF-8 bytes conservatively bound byte-based text tokens. Reserve framing overhead.
     token_bound = len(payload) + 1024
-    cost_bound = (
-        token_bound * INPUT_MICROS_PER_K + MAX_OUTPUT_TOKENS * OUTPUT_MICROS_PER_K + 999
-    ) // 1000
+    cost_bound = estimate_cost_micros(TokenUsage(token_bound, MAX_OUTPUT_TOKENS))
     if token_bound > MAX_INPUT_TOKENS or cost_bound > MAX_ATTEMPT_MICROS:
         raise AnalysisFailure("input_limit")
     return payload
@@ -109,10 +131,10 @@ class OpenAIProvider:
         self.key = key
         self.transport = transport
 
-    def extract(self, segments: list[TranscriptSegment]) -> str:
+    def extract(self, segments: list[TranscriptSegment]) -> Completion:
         return asyncio.run(self.complete(request_payload(self.model, segments)))
 
-    async def complete(self, payload: bytes) -> str:
+    async def complete(self, payload: bytes) -> Completion:
         try:
             async with (
                 asyncio.timeout(30),
@@ -138,8 +160,10 @@ class OpenAIProvider:
                     body.extend(chunk)
         except (httpx2.RequestError, TimeoutError):
             raise AnalysisFailure("provider_unavailable", retryable=True) from None
+        usage = None
         try:
             envelope = json.loads(body)
+            usage = reported_usage(envelope.get("usage"))
             choice = envelope["choices"][0]
             message = choice["message"]
             content = message["content"]
@@ -149,7 +173,7 @@ class OpenAIProvider:
                 or message.get("refusal")
                 or not isinstance(content, str)
             ):
-                raise AnalysisFailure("invalid_output")
-            return content
+                raise AnalysisFailure("invalid_output", usage=usage)
+            return Completion(content, usage)
         except (ValueError, KeyError, IndexError, AttributeError, TypeError):
-            raise AnalysisFailure("invalid_output") from None
+            raise AnalysisFailure("invalid_output", usage=usage) from None

@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     discovery_synthetic_dev: bool = False
     discovery_worker_database_url: PostgresDsn | None = None
     openai_api_key: SecretStr | None = None
+    export_web_origin: HttpUrl = HttpUrl("http://localhost:3000")
 
     @model_validator(mode="after")
     def check_signing_configuration(self) -> Self:
@@ -46,4 +47,14 @@ class Settings(BaseSettings):
             raise ValueError("Use a trusted HTTPS Storage URL or a local development endpoint")
         if self.discovery_provider == "fake" and not self.discovery_synthetic_dev:
             raise ValueError("Enable synthetic development mode to use the fake provider")
+        web = self.export_web_origin
+        if (
+            web.username is not None
+            or web.password is not None
+            or web.query is not None
+            or web.fragment is not None
+            or web.path not in ("", "/", None)
+            or (web.scheme != "https" and web.host not in ("localhost", "127.0.0.1"))
+        ):
+            raise ValueError("Use a trusted HTTPS web origin or a loopback development origin")
         return self

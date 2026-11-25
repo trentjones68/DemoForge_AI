@@ -1,7 +1,7 @@
 import { cache } from "react";
 
 import { type MappingParams, mappingContext } from "@/lib/catalog";
-import { listSchema, studioSchema } from "@/lib/storyboard-fields";
+import { listSchema, readinessSchema, studioSchema } from "@/lib/storyboard-fields";
 import { workspaceApi } from "@/lib/workspaces";
 
 export const studioContext = cache(async (workspaceId: string, opportunityId: string) => {
@@ -28,4 +28,10 @@ export async function storyboard(context: Context, id: string, revision: number 
   const response = await workspaceApi(context.token, `${context.studioApi}/${id}${query}`);
   if (!response.ok) throw new Error("Could not load the storyboard");
   return studioSchema.parse(await response.json());
+}
+
+export async function storyboardReadiness(context: Context, id: string, revision: number) {
+  const response = await workspaceApi(context.token, `${context.studioApi}/${id}/readiness?revision=${revision}`);
+  if (!response.ok) throw new Error("Could not load storyboard readiness");
+  return readinessSchema.parse(await response.json());
 }

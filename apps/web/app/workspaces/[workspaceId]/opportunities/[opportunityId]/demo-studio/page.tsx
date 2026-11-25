@@ -4,9 +4,10 @@ import { z } from "zod";
 
 import { releases, type MappingParams } from "@/lib/catalog";
 import { revisionNumber, uuid } from "@/lib/storyboard-fields";
-import { storyboard, storyboards, studioContext } from "@/lib/storyboards";
+import { storyboard, storyboardReadiness, storyboards, studioContext } from "@/lib/storyboards";
 
 import { AgendaControls, ApprovalControl, GenerateForm, SceneControls } from "./controls";
+import { ReadinessPanel } from "./readiness";
 import { CopyDetails, EvidenceDetails } from "./scene-content";
 
 const revisionNames = {
@@ -28,6 +29,7 @@ export default async function DemoStudio({ params, searchParams }: {
   const id = selected.data.storyboard ?? boards[0]?.id;
   const studio = id ? await storyboard(context, id, selected.data.revision) : null;
   const board = studio?.storyboard;
+  const readiness = board ? await storyboardReadiness(context, board.id, board.revision) : null;
   const current = !!board && board.revision === studio.current_revision;
   const canEdit = context.canWrite && current;
   const stale = board?.scenes.some((scene) => scene.stale_evidence) ?? false;
@@ -97,6 +99,9 @@ export default async function DemoStudio({ params, searchParams }: {
               </p>
               {stale && <p role="status" className="rounded-lg border border-danger p-3 text-sm font-medium">Some requirement or mapping revisions are stale. Review the current mappings and regenerate the affected scenes before approval.</p>}
             </section>
+            {readiness && <ReadinessPanel key={`readiness:${board.id}:${board.revision}`} params={context.params}
+              target={{ id: board.id, revision: board.revision }} readiness={readiness}
+              canEdit={canEdit} approved={!!board.approved_at} studioHref={context.studioHref} />}
             {canEdit && <AgendaControls key={`${board.id}:${board.revision}`} params={context.params} board={board} />}
             <section aria-label="Storyboard scenes" className="space-y-4">
               {board.scenes.map((scene, index) => <article key={scene.id} className="opportunity-panel min-w-0 space-y-4 p-5 sm:p-6">

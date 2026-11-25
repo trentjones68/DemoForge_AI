@@ -14,6 +14,7 @@ from demoforge_api.catalog.routes import catalog_router
 from demoforge_api.db import check_database, database_engine
 from demoforge_api.discovery.routes import discovery_router
 from demoforge_api.discovery.storage import DiscoveryStorage
+from demoforge_api.exports.routes import export_router
 from demoforge_api.opportunities import opportunity_router
 from demoforge_api.planning.routes import planning_router
 from demoforge_api.settings import Settings
@@ -68,6 +69,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(planning_router(engine, verifier))
     app.include_router(catalog_router(engine, verifier))
     app.include_router(storyboard_router(engine, verifier))
+    app.include_router(
+        export_router(engine, verifier, str(configuration.export_web_origin).rstrip("/"))
+    )
 
     @app.get("/health/live", response_model=HealthResponse)
     def liveness(response: Response) -> HealthResponse:

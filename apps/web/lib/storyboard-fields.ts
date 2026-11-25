@@ -54,6 +54,18 @@ export const listSchema = z.array(z.object({
 export const fingerprintSchema = z.string().regex(/^[a-f0-9]{64}$/);
 export const proposalSchema = z.object({ scene: sceneSchema, fingerprint: fingerprintSchema });
 
+export const prepTask = z.enum(["synthetic_data", "rehearsal", "risk_review"]);
+export const exportFormat = z.enum(["md", "pdf"]);
+export const readinessSchema = z.object({
+  revision: revisionNumber,
+  ready: z.boolean(),
+  checks: z.array(z.object({
+    label: z.string(), complete: z.boolean(), blocker: z.string().nullable(), task: prepTask.nullable(),
+  })),
+});
+export type Readiness = z.infer<typeof readinessSchema>;
+export type PrepTask = z.infer<typeof prepTask>;
+
 export type Scene = z.infer<typeof sceneSchema>;
 export type SceneCopy = z.infer<typeof copySchema>;
 export type Proposal = z.infer<typeof proposalSchema>;

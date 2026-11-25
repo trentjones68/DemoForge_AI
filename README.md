@@ -83,3 +83,6 @@ approval, the approved-only downstream contract, and browser verification.
 
 See [Product capability catalog and review](docs/CATALOG.md) for product
 releases, documented support, mapping review, and rollback.
+
+See [Demo Studio](docs/STORYBOARD.md) for storyboard generation, provenance,
+revision approval, verification, and rollback.

@@ -59,6 +59,9 @@ export default async function OpportunityDetail({
               <Link href={`${context.base}/${item.id}/capability-mappings`} className="button-secondary w-full">
                 Capability mapping
               </Link>
+              <Link href={`${context.base}/${item.id}/demo-studio`} className="button-secondary w-full">
+                Demo Studio
+              </Link>
             </>
           )}
           {editable && <ArchiveForm workspaceId={workspaceId} opportunity={item} />}

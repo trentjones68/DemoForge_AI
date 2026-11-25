@@ -56,7 +56,7 @@ export default async function PlanningPage({
             </Link>
           </div>
           {history.map((revision) => (
-            <div key={revision.revision} className="space-y-2 border-t pt-3 text-sm">
+            <div key={revision.revision} id={`plan-${historical.id}-r${revision.revision}`} className="scroll-mt-4 space-y-2 border-t pt-3 text-sm">
               <p className="font-medium">Revision {revision.revision} · {revision.approved_at ? "Approved" : "Draft"}</p>
               <p className="whitespace-pre-wrap break-words">{revision.statement}</p>
               <p className="whitespace-pre-wrap break-words text-muted-foreground">{revision.rationale}</p>

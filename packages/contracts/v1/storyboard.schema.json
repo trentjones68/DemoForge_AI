@@ -1,0 +1,475 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "Brief": {
+      "additionalProperties": false,
+      "properties": {
+        "audience": {
+          "maxLength": 160,
+          "minLength": 1,
+          "pattern": "^[^\\x00]*$",
+          "title": "Audience",
+          "type": "string"
+        },
+        "target_minutes": {
+          "maximum": 180,
+          "minimum": 1,
+          "title": "Target Minutes",
+          "type": "integer"
+        },
+        "business_outcomes": {
+          "items": {
+            "maxLength": 160,
+            "minLength": 1,
+            "pattern": "^[^\\x00]*$",
+            "type": "string"
+          },
+          "maxItems": 5,
+          "minItems": 1,
+          "title": "Business Outcomes",
+          "type": "array"
+        }
+      },
+      "required": [
+        "audience",
+        "target_minutes",
+        "business_outcomes"
+      ],
+      "title": "Brief",
+      "type": "object"
+    },
+    "CatalogRef": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "format": "uuid",
+          "title": "Id",
+          "type": "string"
+        },
+        "revision": {
+          "title": "Revision",
+          "type": "integer"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "source_title": {
+          "title": "Source Title",
+          "type": "string"
+        },
+        "source_url": {
+          "title": "Source Url",
+          "type": "string"
+        },
+        "source_locator": {
+          "title": "Source Locator",
+          "type": "string"
+        },
+        "limitations": {
+          "title": "Limitations",
+          "type": "string"
+        },
+        "dependencies": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Dependencies",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "revision",
+        "name",
+        "source_title",
+        "source_url",
+        "source_locator",
+        "limitations",
+        "dependencies"
+      ],
+      "title": "CatalogRef",
+      "type": "object"
+    },
+    "Evidence": {
+      "additionalProperties": false,
+      "properties": {
+        "session_id": {
+          "format": "uuid",
+          "title": "Session Id",
+          "type": "string"
+        },
+        "requirement_id": {
+          "format": "uuid",
+          "title": "Requirement Id",
+          "type": "string"
+        },
+        "requirement_revision": {
+          "title": "Requirement Revision",
+          "type": "integer"
+        },
+        "requirement": {
+          "title": "Requirement",
+          "type": "string"
+        },
+        "priority": {
+          "enum": [
+            "high",
+            "medium",
+            "low"
+          ],
+          "title": "Priority",
+          "type": "string"
+        },
+        "mapping_id": {
+          "format": "uuid",
+          "title": "Mapping Id",
+          "type": "string"
+        },
+        "mapping_revision": {
+          "title": "Mapping Revision",
+          "type": "integer"
+        },
+        "support_status": {
+          "enum": [
+            "supported",
+            "partial",
+            "unsupported",
+            "unknown"
+          ],
+          "title": "Support Status",
+          "type": "string"
+        },
+        "mapping_rationale": {
+          "title": "Mapping Rationale",
+          "type": "string"
+        },
+        "capability": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CatalogRef"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "session_id",
+        "requirement_id",
+        "requirement_revision",
+        "requirement",
+        "priority",
+        "mapping_id",
+        "mapping_revision",
+        "support_status",
+        "mapping_rationale",
+        "capability"
+      ],
+      "title": "Evidence",
+      "type": "object"
+    },
+    "Gap": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "format": "uuid",
+          "title": "Id",
+          "type": "string"
+        },
+        "revision": {
+          "title": "Revision",
+          "type": "integer"
+        },
+        "question": {
+          "title": "Question",
+          "type": "string"
+        },
+        "priority": {
+          "enum": [
+            "high",
+            "medium",
+            "low"
+          ],
+          "title": "Priority",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "open",
+            "in_progress"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "revision",
+        "question",
+        "priority",
+        "status"
+      ],
+      "title": "Gap",
+      "type": "object"
+    },
+    "ReleaseRef": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "format": "uuid",
+          "title": "Id",
+          "type": "string"
+        },
+        "product": {
+          "title": "Product",
+          "type": "string"
+        },
+        "version": {
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "product",
+        "version"
+      ],
+      "title": "ReleaseRef",
+      "type": "object"
+    },
+    "Scene": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "format": "uuid",
+          "title": "Id",
+          "type": "string"
+        },
+        "minutes": {
+          "maximum": 180,
+          "minimum": 1,
+          "title": "Minutes",
+          "type": "integer"
+        },
+        "content": {
+          "$ref": "#/$defs/SceneCopy"
+        },
+        "evidence": {
+          "$ref": "#/$defs/Evidence"
+        },
+        "gaps": {
+          "items": {
+            "$ref": "#/$defs/Gap"
+          },
+          "title": "Gaps",
+          "type": "array"
+        },
+        "edited_fields": {
+          "items": {
+            "enum": [
+              "title",
+              "actions",
+              "talk_track",
+              "expected_outcome",
+              "synthetic_data",
+              "risks"
+            ],
+            "type": "string"
+          },
+          "title": "Edited Fields",
+          "type": "array"
+        },
+        "stale_evidence": {
+          "title": "Stale Evidence",
+          "type": "boolean"
+        },
+        "support_warning": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Support Warning"
+        }
+      },
+      "required": [
+        "id",
+        "minutes",
+        "content",
+        "evidence",
+        "gaps",
+        "edited_fields",
+        "stale_evidence",
+        "support_warning"
+      ],
+      "title": "Scene",
+      "type": "object"
+    },
+    "SceneCopy": {
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "maxLength": 160,
+          "minLength": 1,
+          "pattern": "^[^\\x00]*$",
+          "title": "Title",
+          "type": "string"
+        },
+        "actions": {
+          "items": {
+            "maxLength": 2400,
+            "minLength": 1,
+            "pattern": "^[^\\x00]*$",
+            "type": "string"
+          },
+          "maxItems": 6,
+          "minItems": 1,
+          "title": "Actions",
+          "type": "array"
+        },
+        "talk_track": {
+          "maxLength": 2400,
+          "minLength": 1,
+          "pattern": "^[^\\x00]*$",
+          "title": "Talk Track",
+          "type": "string"
+        },
+        "expected_outcome": {
+          "maxLength": 2400,
+          "minLength": 1,
+          "pattern": "^[^\\x00]*$",
+          "title": "Expected Outcome",
+          "type": "string"
+        },
+        "synthetic_data": {
+          "items": {
+            "maxLength": 2400,
+            "minLength": 1,
+            "pattern": "^[^\\x00]*$",
+            "type": "string"
+          },
+          "maxItems": 6,
+          "title": "Synthetic Data",
+          "type": "array"
+        },
+        "risks": {
+          "items": {
+            "maxLength": 2400,
+            "minLength": 1,
+            "pattern": "^[^\\x00]*$",
+            "type": "string"
+          },
+          "maxItems": 6,
+          "title": "Risks",
+          "type": "array"
+        }
+      },
+      "required": [
+        "title",
+        "actions",
+        "talk_track",
+        "expected_outcome",
+        "synthetic_data",
+        "risks"
+      ],
+      "title": "SceneCopy",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "revision": {
+      "title": "Revision",
+      "type": "integer"
+    },
+    "action": {
+      "enum": [
+        "generated",
+        "scene_edited",
+        "agenda_updated",
+        "scene_regenerated"
+      ],
+      "title": "Action",
+      "type": "string"
+    },
+    "actor_id": {
+      "format": "uuid",
+      "title": "Actor Id",
+      "type": "string"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "approved_by": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Approved By"
+    },
+    "approved_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Approved At"
+    },
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "id": {
+      "format": "uuid",
+      "title": "Id",
+      "type": "string"
+    },
+    "release": {
+      "$ref": "#/$defs/ReleaseRef"
+    },
+    "brief": {
+      "$ref": "#/$defs/Brief"
+    },
+    "scenes": {
+      "items": {
+        "$ref": "#/$defs/Scene"
+      },
+      "maxItems": 40,
+      "minItems": 1,
+      "title": "Scenes",
+      "type": "array"
+    }
+  },
+  "required": [
+    "revision",
+    "action",
+    "actor_id",
+    "created_at",
+    "approved_by",
+    "approved_at",
+    "id",
+    "release",
+    "brief",
+    "scenes"
+  ],
+  "title": "Storyboard",
+  "type": "object"
+}

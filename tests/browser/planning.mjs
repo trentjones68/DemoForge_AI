@@ -10,6 +10,10 @@ const browser = await chromium.launch(executablePath ? { executablePath } : {});
 const plan = new URL(config.plan, config.base).href;
 const catalog = new URL(`${config.plan.split("/opportunities/")[0]}/catalog`, config.base).href;
 const mappings = new URL(`${config.plan.split("/discovery/")[0]}/capability-mappings`, config.base).href;
+const studio = new URL(`${config.plan.split("/discovery/")[0]}/demo-studio`, config.base).href;
+const unknownRequirement = "Publish an automated compliance summary.";
+const audience = "Synthetic compliance team";
+const manualTrack = "Ask the team to verify the fictional audit totals.";
 
 async function signIn(account) {
   const page = await browser.newPage({ viewport: { width: 390, height: 840 } });
@@ -22,6 +26,66 @@ async function signIn(account) {
     page.getByRole("button", { name: "Sign in" }).click(),
   ]);
   return page;
+}
+
+async function createStoryboard(page) {
+  await page.goto(studio);
+  const newBoard = page.getByRole("form", { name: "New storyboard" });
+  await newBoard.getByLabel("Audience").fill(audience);
+  await newBoard.getByLabel("Duration (minutes)").fill("11");
+  await newBoard.getByLabel("Business outcomes").fill("Confirm the audit reporting workflow.");
+  await newBoard.getByRole("button", { name: "Generate storyboard" }).click();
+  await page.getByRole("heading", { name: audience, exact: true }).waitFor();
+
+  const brief = page.getByRole("region", { name: "Storyboard brief" });
+  const scenes = page.getByRole("region", { name: "Storyboard scenes" });
+  const supported = scenes.getByRole("article").filter({ has: page.getByRole("heading", { name: "Report export" }) });
+  const approval = page.getByRole("region", { name: "Storyboard approval" });
+  await scenes.getByText(/Product support is unverified/).waitFor();
+  await supported.getByRole("link", { name: "Synthetic release guide" }).waitFor();
+  await supported.getByRole("link", { name: "Open requirement revision" }).click();
+  await page.waitForURL(/#plan-.*-r1$/);
+  await page.getByRole("region", { name: "Revision history" }).getByText("Revision 1 · Approved").waitFor();
+  await page.goto(studio);
+
+  const first = await scenes.locator("article h3").first().innerText();
+  await page.locator("summary").filter({ hasText: /^Reorder and time scenes$/ }).click();
+  await page.getByRole("button", { name: "Move scene 1 down" }).focus();
+  await page.keyboard.press("Enter");
+  await page.getByRole("spinbutton", { name: "Minutes for scene 1" }).fill("4");
+  assert.equal(await page.getByRole("button", { name: "Save agenda" }).isDisabled(), true);
+  await page.getByRole("spinbutton", { name: "Minutes for scene 2" }).fill("7");
+  await page.getByRole("button", { name: "Save agenda" }).click();
+  await brief.getByText("Draft · Revision 2").waitFor();
+  assert.notEqual(await scenes.locator("article h3").first().innerText(), first);
+  await supported.locator("summary").filter({ hasText: /^Edit scene$/ }).click();
+  const form = supported.getByRole("form", { name: "Edit scene" });
+  await form.getByLabel("Talk track").fill(manualTrack);
+  await form.getByRole("button", { name: "Save scene" }).click();
+  await brief.getByText("Draft · Revision 3").waitFor();
+  await supported.getByText(manualTrack, { exact: true }).filter({ visible: true }).waitFor();
+  await approval.getByRole("checkbox").check();
+  await approval.getByRole("button", { name: "Approve revision" }).click();
+  await brief.getByText("Approved · Revision 3").waitFor();
+}
+
+async function regenerateStoryboard(page) {
+  await page.goto(studio);
+  const brief = page.getByRole("region", { name: "Storyboard brief" });
+  const scene = page.getByRole("region", { name: "Storyboard scenes" }).getByRole("article").filter({
+    has: page.getByRole("heading", { name: "Report export" }),
+  });
+  await scene.getByText(/Stale evidence/).waitFor();
+  await scene.getByRole("button", { name: "Preview regeneration" }).click();
+  await scene.getByRole("region", { name: "Regeneration proposal" }).getByText(/Mapping r2/).waitFor();
+  await scene.getByRole("button", { name: "Apply proposal" }).click();
+  await brief.getByText("Draft · Revision 4").waitFor();
+  await scene.getByText(manualTrack, { exact: true }).filter({ visible: true }).waitFor();
+  await scene.getByText(/Product support is unverified/).waitFor();
+  await page.getByRole("link", { name: /Revision 3 · Approved/ }).click();
+  await brief.getByText("Historical revision").waitFor();
+  assert.equal(await page.getByRole("button", { name: "Preview regeneration" }).count(), 0);
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
 }
 
 async function verifyCatalogAndMapping(page) {
@@ -65,7 +129,11 @@ async function verifyCatalogAndMapping(page) {
   const confirm = mapping.getByRole("button", { name: "Confirm this mapping revision" });
   await confirm.click();
   await mapping.getByText("Reviewed · Mapping r1", { exact: true }).waitFor();
+  const unmatched = page.getByRole("article").filter({ has: page.getByRole("heading", { name: unknownRequirement, exact: true }) });
+  await unmatched.getByRole("button", { name: "Confirm this mapping revision" }).click();
+  await unmatched.getByText("Reviewed · Mapping r1", { exact: true }).waitFor();
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+  await createStoryboard(page);
 
   await page.goto(catalog);
   await entry.locator("summary").filter({ hasText: /^Edit capability$/ }).click();
@@ -77,6 +145,13 @@ async function verifyCatalogAndMapping(page) {
   await mapping.getByText("Stale catalog evidence", { exact: true }).waitFor();
   await source.waitFor();
   assert.equal(await confirm.count(), 0);
+  await mapping.locator("summary").filter({ hasText: /^Edit mapping$/ }).click();
+  await mapping.getByRole("combobox", { name: /Catalog evidence/ }).selectOption({ label: "Report export · Unknown · r2" });
+  await mapping.getByRole("button", { name: "Save mapping draft" }).click();
+  await mapping.getByText("Draft · Mapping r2", { exact: true }).waitFor();
+  await confirm.click();
+  await mapping.getByText("Reviewed · Mapping r2", { exact: true }).waitFor();
+  await regenerateStoryboard(page);
 }
 
 try {
@@ -129,6 +204,14 @@ try {
   await history.getByText("Revision 2 · Draft").waitFor();
   await history.getByText("Revision 1 · Approved").waitFor();
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+  await page.locator("summary").filter({ hasText: /^Add requirement$/ }).click();
+  const nextRequirement = page.getByRole("form", { name: "Add requirement" });
+  await nextRequirement.getByLabel("Requirement").fill(unknownRequirement);
+  await nextRequirement.getByLabel("Rationale").fill("Discuss the fictional summary workflow.");
+  await nextRequirement.getByRole("button", { name: "Add requirement", exact: true }).click();
+  const nextCard = page.getByRole("article").filter({ has: page.getByRole("heading", { name: unknownRequirement, exact: true }) });
+  await nextCard.getByRole("button", { name: "Approve this revision" }).click();
+  await nextCard.getByText("Approved · Revision 1").waitFor();
   await verifyCatalogAndMapping(page);
 
   const peer = await signIn(config.peer);
@@ -138,9 +221,13 @@ try {
   assert.equal(await peer.getByText("Edit item", { exact: true }).count(), 0);
   assert.equal(await peer.getByRole("button", { name: "Approve this revision" }).count(), 0);
   await peer.goto(mappings);
-  await peer.getByText("Stale catalog evidence", { exact: true }).waitFor();
+  await peer.getByText("Reviewed · Mapping r2", { exact: true }).waitFor();
   assert.equal(await peer.getByRole("button", { name: "Generate mapping drafts" }).count(), 0);
   assert.equal(await peer.getByText("Edit mapping", { exact: true }).count(), 0);
+  await peer.goto(studio);
+  await peer.getByRole("heading", { name: audience, exact: true }).waitFor();
+  assert.equal(await peer.getByRole("button", { name: "Approve revision" }).count(), 0);
+  assert.equal(await peer.getByRole("button", { name: "Preview regeneration" }).count(), 0);
 
   const outsider = await signIn(config.outsider);
   await outsider.goto(plan);
@@ -149,7 +236,10 @@ try {
   await outsider.goto(mappings);
   await outsider.getByRole("heading", { name: "Opportunity not found" }).waitFor();
   assert.equal(await outsider.getByText(config.statement, { exact: true }).count(), 0);
-  console.log("Planning and catalog browser checks passed for evidence, review, revisions, and permissions.");
+  await outsider.goto(studio);
+  await outsider.getByRole("heading", { name: "Opportunity not found" }).waitFor();
+  assert.equal(await outsider.getByText(audience, { exact: true }).count(), 0);
+  console.log("Planning, catalog and Demo Studio browser checks passed.");
 } finally {
   await browser.close();
 }

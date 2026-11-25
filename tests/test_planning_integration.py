@@ -413,6 +413,7 @@ def test_planning_browser_state_transitions_and_permissions(planning_case: Plann
                 "DATABASE_URL": str(case.settings.database_url),
                 "SUPABASE_JWT_ISSUER": case.local.issuer,
                 "SUPABASE_JWKS_URL": f"{case.local.issuer}/.well-known/jwks.json",
+                "EXPORT_WEB_ORIGIN": web_url,
                 "DISCOVERY_PROVIDER": "fake",
                 "DISCOVERY_SYNTHETIC_DEV": "true",
             },

@@ -2,6 +2,7 @@ import json
 
 import pytest
 from contract_support import ROOT, schema_validator
+from demoforge_api.discovery.imports import TextImport
 from demoforge_worker.queue import JobMessageV1
 from pydantic import ValidationError
 
@@ -31,3 +32,26 @@ def test_invalid_job_reference_is_rejected(payload: dict[str, object]) -> None:
     assert not schema_validator("job-message.schema.json").is_valid(payload)
     with pytest.raises(ValidationError):
         JobMessageV1.model_validate_json(json.dumps(payload))
+
+
+def test_discovery_text_import_contract_matches_api() -> None:
+    name = "discovery-text-import.schema.json"
+    schema = json.loads((ROOT / "packages" / "contracts" / "v1" / name).read_text())
+    assert schema.pop("$schema") == "https://json-schema.org/draft/2020-12/schema"
+    assert schema == TextImport.model_json_schema()
+    validator = schema_validator(name)
+    payload = {"kind": "summary", "text": "Synthetic rehearsal notes.\r\n"}
+    validator.validate(payload)
+    assert TextImport.model_validate_json(json.dumps(payload)).model_dump() == (
+        payload | {"provider": "manual"}
+    )
+    for invalid in (
+        {"text": ""},
+        {"text": 42},
+        {"provider": "unverified"},
+        {"workspace_id": "untrusted"},
+        {"file_url": "https://files.example.test/input"},
+    ):
+        assert not validator.is_valid(payload | invalid)
+        with pytest.raises(ValidationError):
+            TextImport.model_validate_json(json.dumps(payload | invalid))

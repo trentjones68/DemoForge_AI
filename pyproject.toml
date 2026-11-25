@@ -12,6 +12,7 @@ dependencies = [
   "pydantic-settings>=2.12,<3",
   "pyjwt[crypto]>=2.12,<3",
   "pypdf>=6,<7",
+  "reportlab>=4.4,<5",
   "sqlalchemy>=2.0,<2.1",
   "uvicorn>=0.38,<1",
 ]
@@ -24,6 +25,7 @@ dev = [
   "ruff>=0.14,<1",
   "types-defusedxml>=0.7,<1",
   "types-jsonschema>=4.25,<5",
+  "types-reportlab>=5.1.0.20261122",
 ]
 
 [tool.uv]

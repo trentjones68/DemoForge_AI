@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 
 import { chromium } from "playwright";
 
@@ -14,6 +15,7 @@ const studio = new URL(`${config.plan.split("/discovery/")[0]}/demo-studio`, con
 const unknownRequirement = "Publish an automated compliance summary.";
 const audience = "Synthetic compliance team";
 const manualTrack = "Ask the team to verify the fictional audit totals.";
+let exportHref;
 
 async function signIn(account) {
   const page = await browser.newPage({ viewport: { width: 390, height: 840 } });
@@ -41,6 +43,9 @@ async function createStoryboard(page) {
   const scenes = page.getByRole("region", { name: "Storyboard scenes" });
   const supported = scenes.getByRole("article").filter({ has: page.getByRole("heading", { name: "Report export" }) });
   const approval = page.getByRole("region", { name: "Storyboard approval" });
+  const readiness = page.getByRole("region", { name: "Demo readiness" });
+  await readiness.getByText("Not demo-ready", { exact: true }).waitFor();
+  assert.equal(await readiness.getByRole("link", { name: /Download/ }).count(), 0);
   await scenes.getByText(/Product support is unverified/).waitFor();
   await supported.getByRole("link", { name: "Synthetic release guide" }).waitFor();
   await supported.getByRole("link", { name: "Open requirement revision" }).click();
@@ -67,6 +72,24 @@ async function createStoryboard(page) {
   await approval.getByRole("checkbox").check();
   await approval.getByRole("button", { name: "Approve revision" }).click();
   await brief.getByText("Approved · Revision 3").waitFor();
+  for (const task of ["Prepare and verify fictional demo data", "Rehearse the flow", "Review demo risks"]) {
+    await readiness.getByRole("button", { name: `Mark complete: ${task}` }).click();
+    await readiness.getByRole("button", { name: `Reopen: ${task}` }).waitFor();
+  }
+  await readiness.getByText("Not demo-ready", { exact: true }).waitFor();
+  await readiness.getByText(/Full product support is missing/).waitFor();
+  const markdownLink = readiness.getByRole("link", { name: "Download Markdown" });
+  const [markdown] = await Promise.all([page.waitForEvent("download"), markdownLink.click()]);
+  assert.match(markdown.suggestedFilename(), /-r3\.md$/);
+  const text = await readFile(await markdown.path(), "utf8");
+  assert.ok(text.includes("Not demo-ready") && text.includes(manualTrack));
+  assert.ok(text.includes("- [x] Prepare and verify fictional demo data"));
+  assert.ok(text.includes(`${config.base}/workspaces/`));
+  const pdfLink = readiness.getByRole("link", { name: "Download PDF" });
+  exportHref = await pdfLink.getAttribute("href");
+  const [pdf] = await Promise.all([page.waitForEvent("download"), pdfLink.click()]);
+  assert.match(pdf.suggestedFilename(), /-r3\.pdf$/);
+  assert.equal((await readFile(await pdf.path())).subarray(0, 5).toString(), "%PDF-");
 }
 
 async function regenerateStoryboard(page) {
@@ -239,7 +262,9 @@ try {
   await outsider.goto(studio);
   await outsider.getByRole("heading", { name: "Opportunity not found" }).waitFor();
   assert.equal(await outsider.getByText(audience, { exact: true }).count(), 0);
-  console.log("Planning, catalog and Demo Studio browser checks passed.");
+  assert.ok(exportHref);
+  assert.equal((await outsider.request.get(new URL(exportHref, config.base).href)).status(), 404);
+  console.log("Planning, catalog, Demo Studio and storyboard download browser checks passed.");
 } finally {
   await browser.close();
 }

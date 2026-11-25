@@ -6,8 +6,8 @@ import { z } from "zod";
 
 import { catalogError, type MappingParams } from "@/lib/catalog";
 import {
-  briefSchema, copySchema, fingerprintSchema, type Proposal, proposalSchema,
-  revisionNumber, type Slot, slotSchema, storyboardSchema, uuid,
+  briefSchema, copySchema, fingerprintSchema, type Proposal, proposalSchema, prepTask,
+  readinessSchema, revisionNumber, type Slot, slotSchema, storyboardSchema, uuid,
 } from "@/lib/storyboard-fields";
 import { studioContext } from "@/lib/storyboards";
 import { workspaceApi } from "@/lib/workspaces";
@@ -88,4 +88,15 @@ export async function approveStoryboard(params: MappingParams, target: Target, _
   return save(params, `/${target.id}/approve`, "POST", {
     revision: target.revision, acknowledge_warnings: form.get("acknowledge") === "yes",
   }, "Storyboard revision approved.");
+}
+
+export async function updatePreparation(params: MappingParams, target: Target, task: string, complete: boolean): Promise<Result> {
+  if (!targetSchema.safeParse(target).success || !prepTask.safeParse(task).success || typeof complete !== "boolean") {
+    return { error: "Invalid preparation item." };
+  }
+  const result = await send(params, `/${target.id}/readiness/${task}`, "PUT", { revision: target.revision, complete });
+  if ("error" in result) return result;
+  readinessSchema.parse(await result.response.json());
+  revalidatePath(result.href);
+  return { message: "Preparation updated." };
 }

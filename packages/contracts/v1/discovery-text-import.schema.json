@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "One authenticated text import into a discovery session.",
+  "properties": {
+    "kind": {
+      "enum": [
+        "transcript",
+        "summary"
+      ],
+      "title": "Kind",
+      "type": "string"
+    },
+    "text": {
+      "maxLength": 250000,
+      "minLength": 1,
+      "title": "Text",
+      "type": "string"
+    },
+    "provider": {
+      "default": "manual",
+      "enum": [
+        "manual",
+        "plaud"
+      ],
+      "title": "Provider",
+      "type": "string"
+    }
+  },
+  "required": [
+    "kind",
+    "text"
+  ],
+  "title": "TextImport",
+  "type": "object"
+}

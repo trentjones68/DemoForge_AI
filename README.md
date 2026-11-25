@@ -11,6 +11,9 @@ Install Docker with Compose, Make, Node and npm at the versions specified in
 `.nvmrc` and `package.json`, and uv 0.13.6. uv uses the Python version in
 `.python-version`.
 
+Install the DejaVu Sans fonts before running PDF exports or `make check`.
+On Ubuntu or Debian, install the `fonts-dejavu-core` package.
+
 ```sh
 cp .env.example .env
 make install
@@ -86,3 +89,9 @@ releases, documented support, mapping review, and rollback.
 
 See [Demo Studio](docs/STORYBOARD.md) for storyboard generation, provenance,
 revision approval, verification, and rollback.
+
+See [Storyboard exports and readiness](docs/EXPORTS.md) for Markdown and PDF
+downloads, preparation and approval gates, rendering setup, and audit events.
+
+See [Plaud imports](docs/PLAUD.md) for the documentation review, manual export
+workflow, and authenticated JSON import contract.
